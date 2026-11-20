@@ -1,4 +1,3 @@
-import 'product.dart';
 
 class Order {
   final String id;

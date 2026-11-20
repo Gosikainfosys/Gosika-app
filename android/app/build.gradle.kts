@@ -7,7 +7,6 @@ plugins {
 android {
     namespace = "com.example.gosika_ecommerce_app"
     compileSdk = 36
-    ndkVersion = "28.2.13676358" // Explicitly set a stable NDK version
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

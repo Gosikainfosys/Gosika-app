@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../core/constants.dart';
 import '../models/campaign.dart';
 
 class CampaignSlider extends StatefulWidget {

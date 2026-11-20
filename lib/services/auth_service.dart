@@ -92,7 +92,7 @@ class AuthService {
     } finally {
       await _storage.delete(key: kTokenKey);
       try {
-        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final GoogleSignIn googleSignIn = GoogleSignIn(clientId: kGoogleWebClientId);
         if (await googleSignIn.isSignedIn()) {
           await googleSignIn.signOut();
         }
@@ -103,6 +103,7 @@ class AuthService {
   Future<({User user, String token})?> signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: kGoogleWebClientId,
         serverClientId: kGoogleWebClientId,
         scopes: <String>['email', 'profile'],
       );
