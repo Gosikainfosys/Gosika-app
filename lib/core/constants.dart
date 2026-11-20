@@ -24,6 +24,11 @@ const double kPad = 16.0;
 const String kBaseUrl = 'https://gosika.sital.info.np/api/v1';
 const String kTokenKey = 'gosika_token';
 
+// Google Authentication Configuration
+// Web Client ID generated from Google Cloud Console → GOSIKA Web Client
+const String kGoogleWebClientId =
+    '962580735721-2lt123pqoi2ovrpuno025bh57d81bk08.apps.googleusercontent.com';
+
 // Currency Formatter
 String formatNPR(dynamic amount) {
   final d = double.tryParse(amount?.toString() ?? '0') ?? 0.0;

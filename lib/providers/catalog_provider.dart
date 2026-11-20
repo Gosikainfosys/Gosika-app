@@ -3,6 +3,7 @@ import 'auth_provider.dart';
 import '../models/product.dart';
 import '../models/deal_product.dart';
 import '../models/campaign.dart';
+import '../models/product_filters.dart';
 import '../services/catalog_service.dart';
 
 final catalogServiceProvider = Provider((ref) {
@@ -18,6 +19,11 @@ final bannersProvider = FutureProvider<List<Banner>>((ref) async {
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   final service = ref.watch(catalogServiceProvider);
   return service.getCategories();
+});
+
+final brandsProvider = FutureProvider<List<Map<String, String>>>((ref) async {
+  final service = ref.watch(catalogServiceProvider);
+  return service.getBrands();
 });
 
 final dealsProvider = FutureProvider<List<DealProduct>>((ref) async {
@@ -93,13 +99,18 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
+      final ProductFilters? filtersObject = _filters['filters_object'] is ProductFilters
+          ? _filters['filters_object'] as ProductFilters
+          : null;
+
       final response = await _service.getProducts(
         page: state.currentPage,
         search: _filters['search'],
-        categoryId: _filters['category_id'],
-        brandId: _filters['brand_id'],
+        categoryId: _filters['category_id'] ?? _filters['category'],
+        brandId: _filters['brand_id'] ?? _filters['brand'],
         isFeatured: _filters['is_featured'],
         sort: _filters['sort'],
+        filters: filtersObject,
       );
 
       state = state.copyWith(

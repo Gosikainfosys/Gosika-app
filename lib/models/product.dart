@@ -109,7 +109,7 @@ class Category {
       name: json['name'],
       slug: json['slug'],
       icon: json['icon'] ?? json['icon_url'],
-      image: json['image_url'],
+      image: json['image_url'] ?? json['image'],
     );
   }
 }

@@ -5,14 +5,18 @@ import '../../../core/theme/app_text_styles.dart';
 
 class SectionHeader extends StatelessWidget {
   final String title;
-  final String iconEmoji;
+  final String? iconEmoji;
+  final String actionText;
   final VoidCallback? onSeeAllTap;
+  final bool showOrangeBar;
 
   const SectionHeader({
     super.key,
     required this.title,
-    this.iconEmoji = '🔥',
+    this.iconEmoji,
+    this.actionText = 'View All',
     this.onSeeAllTap,
+    this.showOrangeBar = false,
   });
 
   @override
@@ -24,16 +28,28 @@ class SectionHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                iconEmoji,
-                style: const TextStyle(fontSize: 18),
-              ),
-              const SizedBox(width: 8),
+              if (showOrangeBar) ...[
+                Container(
+                  width: 4,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryOrange,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ] else if (iconEmoji != null && iconEmoji!.isNotEmpty) ...[
+                Text(
+                  iconEmoji!,
+                  style: const TextStyle(fontSize: 18),
+                ),
+                const SizedBox(width: 8),
+              ],
               Text(
                 title,
                 style: AppTextStyles.heading2.copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.darkText,
                 ),
               ),
@@ -44,7 +60,7 @@ class SectionHeader extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  'See All',
+                  actionText,
                   style: AppTextStyles.button.copyWith(
                     color: AppColors.primaryOrange,
                     fontSize: 13,

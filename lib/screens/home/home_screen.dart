@@ -10,8 +10,6 @@ import '../../models/deal_product.dart';
 import '../../models/product.dart';
 import '../../providers/catalog_provider.dart';
 import 'widgets/category_carousel.dart';
-import 'widgets/home_header.dart';
-import 'widgets/home_search_bar.dart';
 import 'widgets/modern_product_card.dart';
 import 'widgets/promo_banner.dart';
 import 'widgets/section_header.dart';
@@ -187,231 +185,435 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ref.invalidate(featuredProductsProvider);
           ref.invalidate(allProductsProvider);
         },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 110),
-          child: Column(
-            children: [
-              // 1. HERO REGION WITH HIMALAYAN BACKGROUND
-              Stack(
-                children: [
-                  Container(
-                    height: 250,
-                    width: double.infinity,
-                    foregroundDecoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.white.withValues(alpha: 0.1),
-                          AppColors.creamBackground.withValues(alpha: 0.85),
-                          AppColors.creamBackground,
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: const [0.0, 0.75, 1.0],
+        child: CustomScrollView(
+          slivers: [
+            // 1. PINNED STICKY HEADER (Delivery bar collapses up on scroll)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyHomeHeaderDelegate(
+                topPadding: mediaTopPadding,
+                onSearchTap: () => context.push('/search'),
+                onProfileTap: () => context.push('/account'),
+                onCartTap: () => context.push('/cart'),
+              ),
+            ),
+
+            // 2. HOME MAIN SCROLLABLE CONTENT
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 110),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+
+                    // PROMOTIONAL BANNER SECTION
+                    campaignsAsync.when(
+                      data: (campaigns) => PromoBanner(campaigns: campaigns),
+                      loading: () => Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                        ),
+                      ),
+                      error: (err, stack) => const PromoBanner(),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // TRUST / ADVANTAGE BANNER (2x2 Grid)
+                    const TrustBanner(),
+
+                    const SizedBox(height: 20),
+
+                    // SHOP BY CATEGORIES SECTION
+                    SectionHeader(
+                      title: 'Shop by Categories',
+                      showOrangeBar: true,
+                      actionText: 'View All',
+                      onSeeAllTap: () => context.push('/shop'),
+                    ),
+                    const SizedBox(height: 12),
+
+                    categoriesAsync.when(
+                      data: (categories) => CategoryCarousel(apiCategories: categories),
+                      loading: () => const CategoryCarousel(),
+                      error: (err, stack) => const CategoryCarousel(),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // TODAY'S DEALS / BEST DEALS SECTION
+                    SectionHeader(
+                      title: "Today's Deals",
+                      iconEmoji: '🔥',
+                      actionText: 'See All',
+                      onSeeAllTap: () => context.push('/shop'),
+                    ),
+                    const SizedBox(height: 12),
+
+                    dealsAsync.when(
+                      data: (deals) {
+                        final list = deals.isNotEmpty
+                            ? deals.map(_mapDealProduct).toList()
+                            : _fallbackDeals;
+                        return SizedBox(
+                          height: 260,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: ModernProductCard(product: list[index]),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      loading: () => SizedBox(
+                        height: 260,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: _fallbackDeals.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: ModernProductCard(product: _fallbackDeals[index]),
+                            );
+                          },
+                        ),
+                      ),
+                      error: (err, stack) => SizedBox(
+                        height: 260,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: _fallbackDeals.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: ModernProductCard(product: _fallbackDeals[index]),
+                            );
+                          },
+                        ),
                       ),
                     ),
+
+                    const SizedBox(height: 22),
+
+                    // FEATURED PRODUCTS SECTION
+                    SectionHeader(
+                      title: 'Featured Products',
+                      iconEmoji: '👑',
+                      actionText: 'See All',
+                      onSeeAllTap: () => context.push('/shop'),
+                    ),
+                    const SizedBox(height: 12),
+
+                    featuredAsync.when(
+                      data: (products) {
+                        final list = products.isNotEmpty
+                            ? products.map(_mapProduct).toList()
+                            : _fallbackFeatured;
+                        return SizedBox(
+                          height: 260,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: ModernProductCard(product: list[index]),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      loading: () => SizedBox(
+                        height: 260,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: _fallbackFeatured.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: ModernProductCard(product: _fallbackFeatured[index]),
+                            );
+                          },
+                        ),
+                      ),
+                      error: (err, stack) => SizedBox(
+                        height: 260,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: _fallbackFeatured.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: ModernProductCard(product: _fallbackFeatured[index]),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StickyHomeHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double topPadding;
+  final VoidCallback onSearchTap;
+  final VoidCallback onProfileTap;
+  final VoidCallback onCartTap;
+
+  _StickyHomeHeaderDelegate({
+    required this.topPadding,
+    required this.onSearchTap,
+    required this.onProfileTap,
+    required this.onCartTap,
+  });
+
+  static const double _topStripHeight = 28.0;
+  static const double _headerRowHeight = 56.0;
+
+  @override
+  double get minExtent => topPadding + _headerRowHeight;
+
+  @override
+  double get maxExtent => topPadding + _topStripHeight + _headerRowHeight;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final double collapseRatio =
+        (shrinkOffset / _topStripHeight).clamp(0.0, 1.0);
+    final double currentStripHeight = _topStripHeight * (1.0 - collapseRatio);
+    final bool isPinned = shrinkOffset > 5;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: isPinned
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: Column(
+        children: [
+          // Status bar background fill
+          Container(
+            height: topPadding,
+            color: AppColors.primaryOrange,
+          ),
+
+          // 1. Top Delivery Strip ("Delivering across Nepal")
+          if (currentStripHeight > 0)
+            SizedBox(
+              height: currentStripHeight,
+              child: ClipRect(
+                child: Container(
+                  width: double.infinity,
+                  color: AppColors.primaryOrange,
+                  alignment: Alignment.center,
+                  child: Opacity(
+                    opacity: (1.0 - collapseRatio).clamp(0.0, 1.0),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.local_shipping_outlined,
+                          color: AppColors.white,
+                          size: 15,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Delivering across Nepal',
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // 2. Main Header Row (Logo, Search Bar, Profile, Cart)
+          SizedBox(
+            height: _headerRowHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  // Logo Circle
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: AppColors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x18000000),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(4),
                     child: Image.asset(
-                      AppAssets.homeBg,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Image.asset(
-                        AppAssets.splashBg,
-                        fit: BoxFit.cover,
+                      AppAssets.logo,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.shopping_bag_rounded,
+                        color: AppColors.primaryOrange,
+                        size: 20,
                       ),
                     ),
                   ),
 
-                  // Header and Search Bar
-                  Padding(
-                    padding: EdgeInsets.only(top: mediaTopPadding + 4),
-                    child: Column(
-                      children: [
-                        HomeHeader(
-                          onCartTap: () => context.push('/cart'),
-                          onNotificationTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('No new notifications'),
-                                backgroundColor: AppColors.darkText,
-                              ),
-                            );
-                          },
+                  const SizedBox(width: 10),
+
+                  // Search Bar Input (Pill shape)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: onSearchTap,
+                      child: Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        const SizedBox(height: 12),
-                        HomeSearchBar(
-                          onTap: () => context.push('/search'),
-                          onScanTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('QR Scanner ready'),
-                                backgroundColor: AppColors.primaryOrange,
+                        padding: const EdgeInsets.only(left: 14, right: 3),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Search products or brand...',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Color(0xFF9CA3AF),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w400,
+                                ),
                               ),
-                            );
-                          },
+                            ),
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryOrange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.search_rounded,
+                                color: AppColors.white,
+                                size: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // Profile Icon
+                  GestureDetector(
+                    onTap: onProfileTap,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      child: const Icon(
+                        Icons.person_outline_rounded,
+                        color: AppColors.darkText,
+                        size: 23,
+                      ),
+                    ),
+                  ),
+
+                  // Cart Icon with Badge
+                  GestureDetector(
+                    onTap: onCartTap,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          child: const Icon(
+                            Icons.shopping_bag_outlined,
+                            color: AppColors.darkText,
+                            size: 23,
+                          ),
+                        ),
+                        Positioned(
+                          top: 2,
+                          right: 2,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                              color: AppColors.primaryOrange,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 15,
+                              minHeight: 15,
+                            ),
+                            child: const Text(
+                              '0',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
-              // 2. IMAGE-BASED CATEGORY CARDS (Live API / Fallback)
-              categoriesAsync.when(
-                data: (categories) => CategoryCarousel(apiCategories: categories),
-                loading: () => const CategoryCarousel(),
-                error: (err, stack) => const CategoryCarousel(),
-              ),
-
-              const SizedBox(height: 18),
-
-              // 3. PROMOTIONAL BANNER SECTION (Real API Banners)
-              campaignsAsync.when(
-                data: (campaigns) => PromoBanner(campaigns: campaigns),
-                loading: () => Shimmer.fromColors(
-                  baseColor: Colors.grey[300]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    height: 180,
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                  ),
-                ),
-                error: (err, stack) => const PromoBanner(),
-              ),
-
-              const SizedBox(height: 22),
-
-              // 4. BEST DEALS SECTION
-              SectionHeader(
-                title: 'Best Deals',
-                iconEmoji: '🔥',
-                onSeeAllTap: () => context.push('/shop'),
-              ),
-              const SizedBox(height: 12),
-
-              dealsAsync.when(
-                data: (deals) {
-                  final list = deals.isNotEmpty
-                      ? deals.map(_mapDealProduct).toList()
-                      : _fallbackDeals;
-                  return SizedBox(
-                    height: 260,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemCount: list.length,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: ModernProductCard(product: list[index]),
-                        );
-                      },
-                    ),
-                  );
-                },
-                loading: () => SizedBox(
-                  height: 260,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: _fallbackDeals.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ModernProductCard(product: _fallbackDeals[index]),
-                      );
-                    },
-                  ),
-                ),
-                error: (err, stack) => SizedBox(
-                  height: 260,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: _fallbackDeals.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ModernProductCard(product: _fallbackDeals[index]),
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              // 5. DELIVERY / TRUST BANNER
-              const TrustBanner(),
-
-              const SizedBox(height: 22),
-
-              // 6. FEATURED PRODUCTS SECTION
-              SectionHeader(
-                title: 'Featured Products',
-                iconEmoji: '👑',
-                onSeeAllTap: () => context.push('/shop'),
-              ),
-              const SizedBox(height: 12),
-
-              featuredAsync.when(
-                data: (products) {
-                  final list = products.isNotEmpty
-                      ? products.map(_mapProduct).toList()
-                      : _fallbackFeatured;
-                  return SizedBox(
-                    height: 260,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemCount: list.length,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: ModernProductCard(product: list[index]),
-                        );
-                      },
-                    ),
-                  );
-                },
-                loading: () => SizedBox(
-                  height: 260,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: _fallbackFeatured.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ModernProductCard(product: _fallbackFeatured[index]),
-                      );
-                    },
-                  ),
-                ),
-                error: (err, stack) => SizedBox(
-                  height: 260,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: _fallbackFeatured.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ModernProductCard(product: _fallbackFeatured[index]),
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyHomeHeaderDelegate oldDelegate) {
+    return topPadding != oldDelegate.topPadding;
   }
 }

@@ -64,6 +64,24 @@ class CategoryCarousel extends StatelessWidget {
     ),
   ];
 
+  static String getFallbackImageUrl(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('handicraft') || lower.contains('craft')) {
+      return 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=300';
+    } else if (lower.contains('food') || lower.contains('beverage') || lower.contains('drink')) {
+      return 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=300';
+    } else if (lower.contains('apparel') || lower.contains('fashion') || lower.contains('cloth')) {
+      return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300';
+    } else if (lower.contains('home') || lower.contains('living') || lower.contains('decor')) {
+      return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300';
+    } else if (lower.contains('electronic') || lower.contains('tech') || lower.contains('gadget')) {
+      return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300';
+    } else if (lower.contains('beauty') || lower.contains('health') || lower.contains('cosmetic')) {
+      return 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=300';
+    }
+    return 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=300';
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<CategoryItem> items = (apiCategories != null && apiCategories!.isNotEmpty)
@@ -72,9 +90,7 @@ class CategoryCarousel extends StatelessWidget {
             return CategoryItem(
               id: c.id,
               name: c.name,
-              imageUrl: img.isNotEmpty
-                  ? img
-                  : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=300',
+              imageUrl: img.isNotEmpty ? img : getFallbackImageUrl(c.name),
             );
           }).toList()
         : defaultCategories;
@@ -106,11 +122,7 @@ class CategoryCarousel extends StatelessWidget {
             final cat = items[index];
             return GestureDetector(
               onTap: () {
-                if (cat.id.length > 5) {
-                  context.push('/categories/${cat.id}?name=${Uri.encodeComponent(cat.name)}');
-                } else {
-                  context.push('/shop');
-                }
+                context.push('/categories/${cat.id}?name=${Uri.encodeComponent(cat.name)}');
               },
               child: Container(
                 width: 72,
@@ -141,10 +153,14 @@ class CategoryCarousel extends StatelessWidget {
                       child: Image.network(
                         cat.imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Icon(
-                          Icons.shopping_bag,
-                          color: AppColors.primaryOrange,
-                          size: 24,
+                        errorBuilder: (context, error, stackTrace) => Image.network(
+                          getFallbackImageUrl(cat.name),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Icon(
+                            Icons.shopping_bag,
+                            color: AppColors.primaryOrange,
+                            size: 24,
+                          ),
                         ),
                       ),
                     ),

@@ -1,18 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../providers/auth_provider.dart';
 import '../../shared/widgets/decorative_background.dart';
 import '../../shared/widgets/gosika_logo.dart';
 import '../../shared/widgets/primary_auth_button.dart';
 import '../../shared/widgets/social_login_button.dart';
 
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
 
+  Future<void> _handleGoogleSignIn(BuildContext context, WidgetRef ref) async {
+    final success = await ref.read(authProvider.notifier).signInWithGoogle();
+    if (context.mounted && success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google Sign-In successful! Welcome to GOSIKA.'),
+          backgroundColor: AppColors.successGreen,
+        ),
+      );
+      context.go('/');
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+
+    ref.listen(authProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: AppColors.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.creamBackground,
       body: DecorativeBackground(
@@ -127,17 +156,21 @@ class WelcomeScreen extends StatelessWidget {
                       const SizedBox(height: 16),
 
                       // Social Buttons (Google & Facebook)
-                      const Row(
+                      Row(
                         children: [
                           Expanded(
                             child: SocialLoginButton(
                               provider: SocialProvider.google,
+                              text: 'Continue with Google',
+                              onTap: () => _handleGoogleSignIn(context, ref),
+                              isLoading: authState.isLoading,
                             ),
                           ),
-                          SizedBox(width: 12),
-                          Expanded(
+                          const SizedBox(width: 12),
+                          const Expanded(
                             child: SocialLoginButton(
                               provider: SocialProvider.facebook,
+                              text: 'Facebook',
                             ),
                           ),
                         ],

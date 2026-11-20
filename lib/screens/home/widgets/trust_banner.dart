@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
 
 class TrustBanner extends StatelessWidget {
   const TrustBanner({super.key});
@@ -9,119 +8,109 @@ class TrustBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
       decoration: BoxDecoration(
-        color: AppColors.paleOrange,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.primaryOrange.withValues(alpha: 0.15),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Left: Fast Delivery
-          Expanded(
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: AppColors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.local_shipping_rounded,
-                    color: AppColors.primaryOrange,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Fast & Reliable\nDelivery',
-                        style: AppTextStyles.heading3.copyWith(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkText,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Within 2–5 days',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          fontSize: 10,
-                          color: AppColors.secondaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Vertical Divider
-          Container(
-            height: 32,
-            width: 1,
-            color: AppColors.primaryOrange.withValues(alpha: 0.2),
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-          ),
-
-          // Right: Secure Payment
-          Expanded(
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: AppColors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.shield_rounded,
-                    color: AppColors.primaryOrange,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Secure\nPayment',
-                        style: AppTextStyles.heading3.copyWith(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkText,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '100% safe & trusted',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          fontSize: 10,
-                          color: AppColors.secondaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0C000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
           ),
         ],
       ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildTrustItem(
+                  icon: Icons.local_shipping_outlined,
+                  title: 'Free Delivery',
+                  subtitle: 'On all orders',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrustItem(
+                  icon: Icons.shield_outlined,
+                  title: 'Secure Payment',
+                  subtitle: '100% Safe',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTrustItem(
+                  icon: Icons.headset_mic_outlined,
+                  title: '24/7 Support',
+                  subtitle: 'Always Here',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrustItem(
+                  icon: Icons.autorenew_rounded,
+                  title: 'Easy Returns',
+                  subtitle: 'Hassle Free',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.paleOrange,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.primaryOrange,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11.5,
+                  color: AppColors.darkText,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.secondaryText,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

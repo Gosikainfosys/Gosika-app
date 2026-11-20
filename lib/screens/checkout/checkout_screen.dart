@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants.dart';
+import '../../core/theme/app_colors.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/address.dart';
+import '../../models/cart.dart';
 import '../../services/checkout_service.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
-  const CheckoutScreen({super.key});
+  final List<String>? selectedItemIds;
+
+  const CheckoutScreen({
+    super.key,
+    this.selectedItemIds,
+  });
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -21,11 +29,28 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _selectedPayment = 'cod';
   bool _isPlacingOrder = false;
   final TextEditingController _couponController = TextEditingController();
+  final TextEditingController _instructionsController = TextEditingController();
 
   @override
   void dispose() {
     _couponController.dispose();
+    _instructionsController.dispose();
     super.dispose();
+  }
+
+  List<CartItem> _getFilteredItems(Cart cart) {
+    if (widget.selectedItemIds != null && widget.selectedItemIds!.isNotEmpty) {
+      return cart.items.where((e) => widget.selectedItemIds!.contains(e.id)).toList();
+    }
+    return cart.items;
+  }
+
+  double _calculateSubtotal(List<CartItem> items) {
+    double total = 0.0;
+    for (final item in items) {
+      total += item.lineTotal > 0 ? item.lineTotal : (item.unitPrice * item.quantity);
+    }
+    return total;
   }
 
   @override
@@ -46,12 +71,82 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ),
       body: cartAsync.when(
         data: (cart) {
+          final checkoutItems = _getFilteredItems(cart);
+          final subtotal = _calculateSubtotal(checkoutItems);
+
+          if (checkoutItems.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.shopping_cart_outlined, size: 64, color: kMuted),
+                  const SizedBox(height: 12),
+                  const Text('No items selected for checkout'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.pop(),
+                    child: const Text('Return to Cart'),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Delivery Address Section
+                // 1. Selected Items Summary
+                _buildSectionTitle('Order Items (${checkoutItems.length})'),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: checkoutItems.length,
+                    separatorBuilder: (context, index) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final item = checkoutItems[index];
+                      return ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: item.image != null && item.image!.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: item.image!,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(color: Colors.grey[200]),
+                                    errorWidget: (context, url, err) => const Icon(Icons.image, size: 20),
+                                  )
+                                : Container(color: Colors.grey[200], child: const Icon(Icons.image, size: 20)),
+                          ),
+                        ),
+                        title: Text(
+                          item.productName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        subtitle: Text('Qty: ${item.quantity} × ${formatNPR(item.unitPrice)}', style: const TextStyle(fontSize: 11)),
+                        trailing: Text(
+                          formatNPR(item.lineTotal > 0 ? item.lineTotal : (item.unitPrice * item.quantity)),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryOrange),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // 2. Delivery Address Section
                 _buildSectionTitle('Delivery Address', onActionTap: () {
                   context.push('/checkout/address/new');
                 }, actionText: 'Change'),
@@ -69,7 +164,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Payment Method Section
+                // 3. Payment Method Section
                 _buildSectionTitle('Payment Method'),
                 const SizedBox(height: 8),
                 platformConfig.when(
@@ -82,74 +177,49 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: Column(
                       children: [
                         if (config.checkout.codEnabled)
-                          _buildPaymentOption('cod', 'Cash on Delivery', Icons.payments_outlined),
+                          _buildPaymentOption('cod', 'Cash on Delivery (COD)', Icons.payments_outlined),
                         if (config.checkout.esewaEnabled)
-                          _buildPaymentOption('esewa', 'eSewa Mobile Wallet', Icons.account_balance_wallet_outlined),
+                          _buildPaymentOption('esewa', 'eSewa Digital Wallet', Icons.account_balance_wallet_outlined),
                         if (config.checkout.khaltiEnabled)
                           _buildPaymentOption('khalti', 'Khalti Digital Wallet', Icons.account_balance_wallet),
                       ],
                     ),
                   ),
                   loading: () => const LinearProgressIndicator(),
-                  error: (e, s) => const Text('Error loading payment methods'),
+                  error: (e, s) => Container(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        _buildPaymentOption('cod', 'Cash on Delivery (COD)', Icons.payments_outlined),
+                        _buildPaymentOption('esewa', 'eSewa Digital Wallet', Icons.account_balance_wallet_outlined),
+                        _buildPaymentOption('khalti', 'Khalti Digital Wallet', Icons.account_balance_wallet),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
 
-                // Apply Coupon Section
-                _buildSectionTitle('Apply Coupon'),
+                // 4. Delivery Instructions Section
+                _buildSectionTitle('Delivery Instructions (Optional)'),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _couponController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter coupon code',
-                          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFFFF5722)),
-                          ),
-                        ),
-                      ),
+                TextField(
+                  controller: _instructionsController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Leave package at gate or call before delivery',
+                    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                    contentPadding: const EdgeInsets.all(12),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_couponController.text.isNotEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Coupon applied successfully!'),
-                              backgroundColor: Color(0xFFFF5722),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF5722),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(80, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                      child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
-                // Order Summary Section
+                // 5. Order Summary Section
                 _buildSectionTitle('Order Summary'),
                 const SizedBox(height: 8),
                 Container(
@@ -161,14 +231,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   child: Column(
                     children: [
-                      _buildSummaryRow('Items (${cart.items.length})', formatNPR(cart.subtotal)),
+                      _buildSummaryRow('Items Subtotal (${checkoutItems.length})', formatNPR(subtotal)),
                       const SizedBox(height: 6),
                       _buildSummaryRow('Delivery Fee', 'रु 0.00'),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: Divider(height: 1),
                       ),
-                      _buildSummaryRow('Grand Total', formatNPR(cart.subtotal), isBold: true),
+                      _buildSummaryRow('Grand Total', formatNPR(subtotal), isBold: true),
                     ],
                   ),
                 ),
@@ -176,7 +246,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
                 // Place Order Button
                 ElevatedButton(
-                  onPressed: (_selectedAddress == null || _isPlacingOrder) ? null : _handlePlaceOrder,
+                  onPressed: (_selectedAddress == null || _isPlacingOrder)
+                      ? null
+                      : () => _handlePlaceOrder(checkoutItems),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF5722),
                     foregroundColor: Colors.white,
@@ -230,8 +302,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.05),
-          border: Border.all(color: const Color(0xFFFF5722).withOpacity(0.3)),
+          color: Colors.orange.withValues(alpha: 0.05),
+          border: Border.all(color: const Color(0xFFFF5722).withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Column(
@@ -332,23 +404,38 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Future<void> _handlePlaceOrder() async {
+  Future<void> _handlePlaceOrder(List<CartItem> items) async {
+    if (_selectedAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select or add a delivery address.')),
+      );
+      return;
+    }
+
     setState(() => _isPlacingOrder = true);
     try {
-      final cart = ref.read(cartProvider).value!;
-      final itemIds = cart.items.map((e) => e.id).toList();
+      final cartItemIds = items.map((e) => e.id).toList();
       final checkoutService = CheckoutService(await ref.read(apiClientProvider));
 
-      final sessionId = await checkoutService.createSession(addressId: _selectedAddress!.id, itemIds: itemIds);
-      final result = await checkoutService.placeOrder(checkoutSessionId: sessionId, paymentMethod: _selectedPayment);
+      final result = await checkoutService.initiateCheckout(
+        cartItemIds: cartItemIds,
+        shippingAddressId: _selectedAddress!.id,
+        billingAddressId: _selectedAddress!.id,
+        paymentMethod: _selectedPayment,
+        deliveryInstructions: _instructionsController.text.trim(),
+      );
 
       if (mounted) {
         ref.invalidate(cartProvider);
 
-        if (_selectedPayment == 'cod') {
-          context.go('/checkout/success', extra: result.orderNumber);
+        if (_selectedPayment == 'cod' || result.paymentUrl == null) {
+          context.go('/checkout/success', extra: result.orderNumber ?? result.orderId);
         } else {
-          context.push('/checkout/payment', extra: {'orderId': result.id, 'method': _selectedPayment});
+          context.push('/checkout/payment', extra: {
+            'orderId': result.orderId,
+            'method': _selectedPayment,
+            'paymentUrl': result.paymentUrl,
+          });
         }
       }
     } catch (e) {

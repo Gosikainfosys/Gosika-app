@@ -5,12 +5,18 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/checkout_service.dart';
-import '../../core/api_client.dart';
 
 class PaymentWebViewScreen extends ConsumerStatefulWidget {
   final String orderId;
   final String method;
-  const PaymentWebViewScreen({super.key, required this.orderId, required this.method});
+  final String? paymentUrl;
+
+  const PaymentWebViewScreen({
+    super.key,
+    required this.orderId,
+    required this.method,
+    this.paymentUrl,
+  });
 
   @override
   ConsumerState<PaymentWebViewScreen> createState() => _PaymentWebViewScreenState();
@@ -24,7 +30,7 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
   void initState() {
     super.initState();
     _controller = WebViewController()
-      ..setJavaScriptMode(GestureDetector().behavior == HitTestBehavior.opaque ? JavaScriptMode.unrestricted : JavaScriptMode.unrestricted)
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (_) => setState(() => _isLoading = false),
@@ -55,6 +61,11 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
   }
 
   Future<void> _loadPayment() async {
+    if (widget.paymentUrl != null && widget.paymentUrl!.isNotEmpty) {
+      _controller.loadRequest(Uri.parse(widget.paymentUrl!));
+      return;
+    }
+
     try {
       final apiClient = ref.read(apiClientProvider);
       final service = CheckoutService(apiClient);

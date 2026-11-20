@@ -38,31 +38,31 @@ class FloatingBottomNav extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                // Item 0: Home
+                // Item 0: Category
                 _buildNavItem(
                   index: 0,
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Home',
-                ),
-
-                // Item 1: Categories
-                _buildNavItem(
-                  index: 1,
                   icon: Icons.grid_view_outlined,
                   activeIcon: Icons.grid_view_rounded,
-                  label: 'Categories',
+                  label: 'Category',
                 ),
 
-                // Item 2: Space reserved for Central Floating Home Button
+                // Item 1: Message
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.chat_bubble_outline_rounded,
+                  activeIcon: Icons.chat_bubble_rounded,
+                  label: 'Message',
+                ),
+
+                // Space reserved for Central Floating Home Button
                 const SizedBox(width: 52),
 
-                // Item 3: Wishlist
+                // Item 3: Cart
                 _buildNavItem(
-                  index: 2,
-                  icon: Icons.favorite_outline_rounded,
-                  activeIcon: Icons.favorite_rounded,
-                  label: 'Wishlist',
+                  index: 3,
+                  icon: Icons.shopping_cart_outlined,
+                  activeIcon: Icons.shopping_cart_rounded,
+                  label: 'Cart',
                 ),
 
                 // Item 4: Account
@@ -76,11 +76,11 @@ class FloatingBottomNav extends StatelessWidget {
             ),
           ),
 
-          // Central Floating Home Button (Overlapping)
+          // Central Floating Home Button (Overlapping) -> Index 2 (Home)
           Positioned(
             top: 2,
             child: GestureDetector(
-              onTap: () => onItemTapped(0),
+              onTap: () => onItemTapped(2),
               child: Container(
                 width: 56,
                 height: 56,
@@ -95,10 +95,10 @@ class FloatingBottomNav extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.home_rounded,
                   color: AppColors.white,
-                  size: 28,
+                  size: selectedIndex == 2 ? 30 : 26,
                 ),
               ),
             ),

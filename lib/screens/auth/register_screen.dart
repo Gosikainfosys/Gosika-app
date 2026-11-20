@@ -112,6 +112,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    FocusScope.of(context).unfocus();
+    final success = await ref.read(authProvider.notifier).signInWithGoogle();
+    if (mounted && success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google Sign-In successful! Welcome to GOSIKA.'),
+          backgroundColor: AppColors.successGreen,
+        ),
+      );
+      context.go('/');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -346,17 +360,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       const SizedBox(height: 16),
 
                       // Social Buttons
-                      const Row(
+                      Row(
                         children: [
                           Expanded(
                             child: SocialLoginButton(
                               provider: SocialProvider.google,
+                              text: 'Continue with Google',
+                              onTap: _handleGoogleSignIn,
+                              isLoading: ref.watch(authProvider).isLoading,
                             ),
                           ),
-                          SizedBox(width: 12),
-                          Expanded(
+                          const SizedBox(width: 12),
+                          const Expanded(
                             child: SocialLoginButton(
                               provider: SocialProvider.facebook,
+                              text: 'Facebook',
                             ),
                           ),
                         ],

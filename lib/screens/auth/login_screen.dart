@@ -56,6 +56,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    FocusScope.of(context).unfocus();
+    final success = await ref.read(authProvider.notifier).signInWithGoogle();
+    if (mounted && success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google Sign-In successful! Welcome to GOSIKA.'),
+          backgroundColor: AppColors.successGreen,
+        ),
+      );
+      context.go('/');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -231,17 +245,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 18),
 
                       // Social Buttons
-                      const Row(
+                      Row(
                         children: [
                           Expanded(
                             child: SocialLoginButton(
                               provider: SocialProvider.google,
+                              text: 'Continue with Google',
+                              onTap: _handleGoogleSignIn,
+                              isLoading: authState.isLoading,
                             ),
                           ),
-                          SizedBox(width: 12),
-                          Expanded(
+                          const SizedBox(width: 12),
+                          const Expanded(
                             child: SocialLoginButton(
                               provider: SocialProvider.facebook,
+                              text: 'Facebook',
                             ),
                           ),
                         ],

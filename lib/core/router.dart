@@ -10,6 +10,7 @@ import '../screens/auth/verify_email_screen.dart';
 import '../screens/location/location_permission_screen.dart';
 import '../screens/catalog/product_detail_screen.dart';
 import '../screens/catalog/product_list_screen.dart';
+import '../screens/catalog/search_screen.dart';
 import '../screens/cart/cart_screen.dart';
 import '../screens/checkout/checkout_screen.dart';
 import '../screens/checkout/address_form_screen.dart';
@@ -116,7 +117,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/shop',
-        builder: (context, state) => const ProductListScreen(title: 'Shop'),
+        builder: (context, state) {
+          final category = state.uri.queryParameters['category'];
+          final brand = state.uri.queryParameters['brand'];
+          final query = state.uri.queryParameters['q'];
+          final lat = double.tryParse(state.uri.queryParameters['lat'] ?? '');
+          final lng = double.tryParse(state.uri.queryParameters['lng'] ?? '');
+          final radius = double.tryParse(state.uri.queryParameters['radius'] ?? '');
+
+          return ProductListScreen(
+            title: query != null ? 'Search: "$query"' : (category != null ? 'Category: $category' : 'Shop'),
+            categoryId: category,
+            brandId: brand,
+            search: query,
+            lat: lat,
+            lng: lng,
+            radius: radius,
+          );
+        },
       ),
       GoRoute(
         path: '/categories/:uuid',
@@ -138,7 +156,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/search',
         builder: (context, state) {
           final query = state.uri.queryParameters['q'];
-          return ProductListScreen(title: 'Search: $query', search: query);
+          if (query == null || query.isEmpty) {
+            return const SearchScreen();
+          }
+          return ProductListScreen(title: 'Search: "$query"', search: query);
         },
       ),
       GoRoute(
@@ -154,7 +175,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/checkout',
-        builder: (context, state) => const CheckoutScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final selectedIds = extra?['selectedItemIds'] as List<String>?;
+          return CheckoutScreen(selectedItemIds: selectedIds);
+        },
       ),
       GoRoute(
         path: '/checkout/address/new',
@@ -164,7 +189,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/checkout/payment',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
-          return PaymentWebViewScreen(orderId: extra['orderId'], method: extra['method']);
+          return PaymentWebViewScreen(
+            orderId: extra['orderId'],
+            method: extra['method'],
+            paymentUrl: extra['paymentUrl'],
+          );
         },
       ),
       GoRoute(

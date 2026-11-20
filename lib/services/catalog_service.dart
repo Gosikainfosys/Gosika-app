@@ -2,6 +2,7 @@ import '../core/api_client.dart';
 import '../models/product.dart';
 import '../models/deal_product.dart';
 import '../models/campaign.dart';
+import '../models/product_filters.dart';
 
 class CatalogService {
   final ApiClient _apiClient;
@@ -20,6 +21,35 @@ class CatalogService {
     return data.map((e) => Category.fromJson(e)).toList();
   }
 
+  Future<List<String>> getSuggestions(String query) async {
+    if (query.trim().isEmpty) return [];
+    try {
+      final response = await _apiClient.dio.get('/products/suggestions', queryParameters: {'q': query});
+      final List data = response.data['data'] ?? [];
+      return data.map((e) => e.toString()).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, String>>> getBrands() async {
+    try {
+      final response = await _apiClient.dio.get('/brands');
+      final List data = response.data['data'] ?? [];
+      return data.map((e) => {
+        'id': e['id'].toString(),
+        'name': e['name'].toString(),
+        'slug': (e['slug'] ?? e['name']).toString(),
+      }).toList();
+    } catch (_) {
+      return [
+        {'id': 'brand_gosika', 'name': 'Gosika Select', 'slug': 'gosika-select'},
+        {'id': 'brand_himalaya', 'name': 'Himalayan Crafts', 'slug': 'himalayan-crafts'},
+        {'id': 'brand_nepal', 'name': 'Made in Nepal', 'slug': 'made-in-nepal'},
+      ];
+    }
+  }
+
   Future<List<DealProduct>> getDeals() async {
     final response = await _apiClient.dio.get('/deals', queryParameters: {'per_page': 12});
     final List data = response.data['data'];
@@ -34,23 +64,33 @@ class CatalogService {
 
   Future<PaginatedResponse<Product>> getProducts({
     int page = 1,
+    int perPage = 20,
     String? search,
     String? categoryId,
     String? brandId,
     bool? isFeatured,
     String? sort,
+    ProductFilters? filters,
   }) async {
-    final response = await _apiClient.dio.get('/products', queryParameters: {
+    final Map<String, dynamic> queryParams = {
       'page': page,
-      'search': search,
-      'category_id': categoryId,
-      'brand_id': brandId,
-      if (isFeatured != null) 'is_featured': isFeatured ? 1 : 0,
-      'sort': sort,
-    }..removeWhere((key, value) => value == null));
+      'per_page': perPage,
+    };
 
-    final List data = response.data['data'];
-    final meta = PaginationMeta.fromJson(response.data['meta']);
+    if (filters != null) {
+      queryParams.addAll(filters.toMap());
+    } else {
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+      if (categoryId != null && categoryId.isNotEmpty) queryParams['category_id'] = categoryId;
+      if (brandId != null && brandId.isNotEmpty) queryParams['brand_id'] = brandId;
+      if (isFeatured != null) queryParams['is_featured'] = isFeatured ? 1 : 0;
+      if (sort != null && sort.isNotEmpty) queryParams['sort'] = sort;
+    }
+
+    final response = await _apiClient.dio.get('/products', queryParameters: queryParams);
+
+    final List data = response.data['data'] ?? [];
+    final meta = PaginationMeta.fromJson(response.data['meta'] ?? {});
 
     return PaginatedResponse(
       data: data.map((e) => Product.fromJson(e)).toList(),

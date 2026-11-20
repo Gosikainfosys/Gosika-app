@@ -6,61 +6,84 @@ enum SocialProvider { google, facebook }
 
 class SocialLoginButton extends StatelessWidget {
   final SocialProvider provider;
+  final String? text;
   final VoidCallback? onTap;
-  final bool isEnabled;
+  final bool isLoading;
+  final bool? isEnabled;
 
   const SocialLoginButton({
     super.key,
     required this.provider,
+    this.text,
     this.onTap,
-    this.isEnabled = false,
+    this.isLoading = false,
+    this.isEnabled,
   });
 
   @override
   Widget build(BuildContext context) {
     final isGoogle = provider == SocialProvider.google;
-    final label = isGoogle ? 'Google' : 'Facebook';
+    final enabled = isEnabled ?? isGoogle;
+    final label = text ?? (isGoogle ? 'Continue with Google' : 'Google');
 
-    return OutlinedButton(
-      onPressed: () {
-        if (!isEnabled) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('$label Sign-In is not configured yet.'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: AppColors.primaryText,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        } else if (onTap != null) {
-          onTap!();
-        }
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primaryText,
-        backgroundColor: AppColors.white,
-        side: const BorderSide(color: AppColors.border, width: 1.2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          isGoogle
-              ? const GoogleLogoIcon()
-              : const Icon(Icons.facebook_rounded, color: Color(0xFF1877F2), size: 22),
-          const SizedBox(width: 10),
-          Text(
-            label,
-            style: AppTextStyles.button.copyWith(
-              color: AppColors.primaryText,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+    return SizedBox(
+      height: 50,
+      child: OutlinedButton(
+        onPressed: isLoading
+            ? null
+            : () {
+                if (!enabled) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('$label Sign-In is not configured yet.'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppColors.primaryText,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                } else if (onTap != null) {
+                  onTap!();
+                }
+              },
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaryText,
+          backgroundColor: AppColors.white,
+          side: const BorderSide(color: AppColors.border, width: 1.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryOrange),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  isGoogle
+                      ? const GoogleLogoIcon()
+                      : const Icon(Icons.facebook_rounded, color: Color(0xFF1877F2), size: 22),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.button.copyWith(
+                        color: AppColors.primaryText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
