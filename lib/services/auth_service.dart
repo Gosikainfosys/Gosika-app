@@ -94,7 +94,7 @@ class AuthService {
       await _storage.delete(key: kTokenKey);
       try {
         final GoogleSignIn googleSignIn = GoogleSignIn(
-          clientId: kIsWeb ? kGoogleWebClientId : kGoogleAndroidClientId,
+          clientId: kIsWeb ? kGoogleWebClientId : null,
           serverClientId: kGoogleWebClientId,
         );
         if (await googleSignIn.isSignedIn()) {
@@ -107,7 +107,7 @@ class AuthService {
   Future<({User user, String token})?> signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: kIsWeb ? kGoogleWebClientId : kGoogleAndroidClientId,
+        clientId: kIsWeb ? kGoogleWebClientId : null,
         serverClientId: kGoogleWebClientId,
         scopes: <String>['email', 'profile'],
       );
