@@ -173,6 +173,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final dealsAsync = ref.watch(dealsProvider);
     final featuredAsync = ref.watch(featuredProductsProvider);
+    final allProductsAsync = ref.watch(allProductsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.creamBackground,
@@ -366,6 +367,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           },
                         ),
                       ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // EXPLORE ALL PRODUCTS GRID SECTION (Vertical multiple rows)
+                    SectionHeader(
+                      title: 'Explore Products',
+                      iconEmoji: '🛍️',
+                      actionText: 'View All',
+                      onSeeAllTap: () => context.push('/shop'),
+                    ),
+                    const SizedBox(height: 12),
+
+                    allProductsAsync.when(
+                      data: (products) {
+                        final list = products.isNotEmpty
+                            ? products.map(_mapProduct).toList()
+                            : _fallbackFeatured;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: list.length,
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.68,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                            ),
+                            itemBuilder: (context, index) {
+                              return ModernProductCard(product: list[index]);
+                            },
+                          ),
+                        );
+                      },
+                      loading: () => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: 4,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.68,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                          ),
+                          itemBuilder: (context, index) {
+                            return Shimmer.fromColors(
+                              baseColor: Colors.grey[300]!,
+                              highlightColor: Colors.grey[100]!,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      error: (err, stack) => const SizedBox.shrink(),
                     ),
 
                     const SizedBox(height: 16),
