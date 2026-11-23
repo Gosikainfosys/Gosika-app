@@ -12,8 +12,8 @@ class AccountScreen extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final user = authState.user;
 
-    final userName = user != null ? '${user.firstName} ${user.lastName}' : 'Sital Mahato';
-    final userEmail = user?.email ?? 'sitalmahato00@gmail.com';
+    final userName = user != null ? '${user.firstName} ${user.lastName}' : 'Guest User';
+    final userEmail = user?.email ?? 'Please log in to continue';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -34,7 +34,7 @@ class AccountScreen extends ConsumerWidget {
                     radius: 30,
                     backgroundColor: const Color(0xFFFF5722).withOpacity(0.1),
                     child: Text(
-                      userName.isNotEmpty ? userName[0].toUpperCase() : 'S',
+                      userName.isNotEmpty ? userName[0].toUpperCase() : 'G',
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF5722)),
                     ),
                   ),
@@ -78,28 +78,42 @@ class AccountScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // Log Out Button
+            // Log Out / Log In Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: InkWell(
-                onTap: () => ref.read(authProvider.notifier).logout(),
+                onTap: () {
+                  if (user != null) {
+                    ref.read(authProvider.notifier).logout();
+                  } else {
+                    context.push('/login');
+                  }
+                },
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   width: double.infinity,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFEBEE),
+                    color: user != null ? const Color(0xFFFFEBEE) : kPrimary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.logout, color: Colors.red, size: 18),
-                      SizedBox(width: 8),
+                      Icon(
+                        user != null ? Icons.logout : Icons.login,
+                        color: user != null ? Colors.red : kPrimary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
                       Text(
-                        'Log Out',
-                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                        user != null ? 'Log Out' : 'Log In',
+                        style: TextStyle(
+                          color: user != null ? Colors.red : kPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),

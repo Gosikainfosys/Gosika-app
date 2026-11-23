@@ -52,7 +52,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
             ),
           );
         }
-        _navigateToWelcome();
+        _navigateToHome();
         return;
       }
 
@@ -66,7 +66,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
             ),
           );
         }
-        _navigateToWelcome();
+        _navigateToHome();
         return;
       }
 
@@ -74,12 +74,12 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Location permission was denied. Proceeding to welcome.'),
+            content: Text('Location permission was denied. Proceeding to home.'),
             backgroundColor: AppColors.secondaryText,
           ),
         );
       }
-      _navigateToWelcome();
+      _navigateToHome();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,15 +89,15 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
           ),
         );
       }
-      _navigateToWelcome();
+      _navigateToHome();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _navigateToWelcome() {
+  void _navigateToHome() {
     if (mounted) {
-      context.go('/welcome');
+      context.go('/');
     }
   }
 
@@ -166,7 +166,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton(
-                  onPressed: _navigateToWelcome,
+                  onPressed: _navigateToHome,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primaryText,
                     side: const BorderSide(color: AppColors.border, width: 1.5),

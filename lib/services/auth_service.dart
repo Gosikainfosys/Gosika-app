@@ -1,8 +1,6 @@
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../models/user.dart';
@@ -92,97 +90,25 @@ class AuthService {
     } catch (_) {
     } finally {
       await _storage.delete(key: kTokenKey);
-      try {
-        final GoogleSignIn googleSignIn = GoogleSignIn(
-          clientId: kIsWeb ? kGoogleWebClientId : null,
-          serverClientId: kGoogleWebClientId,
-        );
-        if (await googleSignIn.isSignedIn()) {
-          await googleSignIn.signOut();
-        }
-      } catch (_) {}
     }
   }
 
-  Future<({User user, String token})?> signInWithGoogle() async {
+  Future<void> signInWithGoogle() async {
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: kIsWeb ? kGoogleWebClientId : null,
-        serverClientId: kGoogleWebClientId,
-        scopes: <String>['email', 'profile'],
-      );
-
-      // Sign out any cached local Google session first to ensure clean OAuth prompt
-      try {
-        await googleSignIn.signOut();
-      } catch (_) {}
-
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        // User canceled sign-in flow
-        return null;
+      final origin = kBaseUrl.replaceFirst('/api/v1', '');
+      final url = Uri.parse('$origin/api/v1/auth/google/redirect');
+      final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        throw 'Could not launch Google Sign-In';
       }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final String tokenToSend = googleAuth.idToken ?? googleAuth.accessToken ?? '';
-
-      if (tokenToSend.isEmpty) {
-        throw 'Failed to obtain Google authentication token. Please try again.';
-      }
-
-      Response response;
-      try {
-        response = await _apiClient.dio.post('/auth/google', data: {
-          'id_token': tokenToSend,
-          'token': tokenToSend,
-          'access_token': googleAuth.accessToken,
-          'device_name': 'Flutter',
-        });
-      } on DioException catch (dioErr) {
-        if (dioErr.response?.statusCode == 405 ||
-            dioErr.response?.data?.toString().contains('Supported methods: GET') == true) {
-          try {
-            response = await _apiClient.dio.get('/auth/google', queryParameters: {
-              'id_token': tokenToSend,
-              'token': tokenToSend,
-              'access_token': googleAuth.accessToken,
-              'device_name': 'Flutter',
-            });
-          } on DioException catch (_) {
-            response = await _apiClient.dio.post('/auth/google/callback', data: {
-              'id_token': tokenToSend,
-              'token': tokenToSend,
-              'access_token': googleAuth.accessToken,
-              'device_name': 'Flutter',
-            });
-          }
-        } else {
-          rethrow;
-        }
-      }
-
-      final data = response.data?['data'] ?? response.data;
-      final user = User.fromJson(data['user']);
-      final token = (data['token'] ?? data['access_token'] ?? '').toString();
-
-      await _storage.write(key: kTokenKey, value: token);
-      return (user: user, token: token);
     } catch (e) {
       if (e is String) rethrow;
-      if (e is PlatformException) {
-        if (e.code == 'channel-error' ||
-            (e.message != null && e.message!.contains('Unable to establish connection'))) {
-          throw 'Google Sign-In requires a full app restart. Please stop the app and rebuild/run it.';
-        }
-        if (e.code == '10' ||
-            e.toString().contains('ApiException: 10') ||
-            e.toString().contains('DEVELOPER_ERROR')) {
-          throw 'Google Sign-In Error (ApiException 10): Ensure Package Name "com.gosika.app" and SHA-1 (80:61:AD:B5:6B:70:93:BF:AC:4A:B3:E3:38:38:6F:D5:A0:14:45:A3) are registered under the Android OAuth Client in Google Cloud Console.';
-        }
-        throw e.message ?? e.toString();
-      }
       throw ApiClient.parseError(e);
     }
+  }
+
+  Future<void> handleSocialToken(String token) async {
+    await _storage.write(key: kTokenKey, value: token);
   }
 
   Future<String> forgotPassword(String email) async {
@@ -224,6 +150,18 @@ class AuthService {
       return (user: user, token: token);
     } catch (e) {
       throw ApiClient.parseError(e);
+    }
+  }
+
+  Future<void> resendEmailVerification(String email) async {
+    try {
+      await _apiClient.dio.post('/auth/email/resend', data: {'email': email});
+    } catch (_) {
+      try {
+        await _apiClient.dio.post('/auth/email/send', data: {'email': email});
+      } catch (e) {
+        throw ApiClient.parseError(e);
+      }
     }
   }
 

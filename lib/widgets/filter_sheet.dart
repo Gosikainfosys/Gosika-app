@@ -250,33 +250,25 @@ class _FilterSheetState extends State<FilterSheet> {
 
                 // 4. Rating Filter
                 _buildSectionHeader('Minimum Rating'),
-                Row(
-                  children: [4, 3, 2].map((stars) {
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [4, 3, 2, 1].map((stars) {
                     final isSelected = _filters.minRating == stars;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('$stars★ & above'),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.star, size: 14, color: Colors.amber),
-                          ],
-                        ),
-                        selected: isSelected,
-                        selectedColor: AppColors.primaryOrange,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : AppColors.darkText,
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                        onSelected: (selected) {
-                          setState(() {
-                            _filters.minRating = selected ? stars : null;
-                          });
-                        },
+                    return ChoiceChip(
+                      label: Text('$stars★ & above'),
+                      selected: isSelected,
+                      selectedColor: AppColors.primaryOrange,
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.white : AppColors.darkText,
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
+                      onSelected: (selected) {
+                        setState(() {
+                          _filters.minRating = selected ? stars : null;
+                        });
+                      },
                     );
                   }).toList(),
                 ),

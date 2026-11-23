@@ -18,4 +18,5 @@ class AppAssets {
   // Welcome & Auth
   static const String welcomeShoppingBag = 'assets/welcome/welcome_shopping_bag.jpeg';
   static const String forgotPasswordIllustration = 'assets/welcome/welcome_shopping_bag.jpeg';
+  static const String googleIcon = 'assets/illustrations/google_icon.png';
 }

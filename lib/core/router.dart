@@ -26,6 +26,7 @@ import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/main_navigation_screen.dart';
 import '../screens/checkout/payment_webview_screen.dart';
 import '../screens/auth/verify_phone_screen.dart';
+import '../screens/auth/google_auth_webview_screen.dart';
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
@@ -88,6 +89,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/auth/google-webview',
+        builder: (context, state) => const GoogleAuthWebViewScreen(),
       ),
       GoRoute(
         path: '/welcome',

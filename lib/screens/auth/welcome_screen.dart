@@ -14,16 +14,7 @@ class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
 
   Future<void> _handleGoogleSignIn(BuildContext context, WidgetRef ref) async {
-    final success = await ref.read(authProvider.notifier).signInWithGoogle();
-    if (context.mounted && success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Google Sign-In successful! Welcome to GOSIKA.'),
-          backgroundColor: AppColors.successGreen,
-        ),
-      );
-      context.go('/');
-    }
+    context.push('/auth/google-webview');
   }
 
   @override
@@ -155,25 +146,12 @@ class WelcomeScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
 
-                      // Social Buttons (Google & Facebook)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SocialLoginButton(
-                              provider: SocialProvider.google,
-                              text: 'Continue with Google',
-                              onTap: () => _handleGoogleSignIn(context, ref),
-                              isLoading: authState.isLoading,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: SocialLoginButton(
-                              provider: SocialProvider.facebook,
-                              text: 'Facebook',
-                            ),
-                          ),
-                        ],
+                      // Social Button (Google)
+                      SocialLoginButton(
+                        provider: SocialProvider.google,
+                        text: 'Continue with Google',
+                        onTap: () => _handleGoogleSignIn(context, ref),
+                        isLoading: authState.isLoading,
                       ),
                       const SizedBox(height: 16),
 

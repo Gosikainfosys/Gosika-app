@@ -22,20 +22,27 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final rawName = json['name']?.toString() ?? '';
+    final nameParts = rawName.trim().split(' ');
+    final defaultFirst = nameParts.isNotEmpty ? nameParts.first : 'User';
+    final defaultLast = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
     return User(
-      id: json['id'],
-      firstName: json['first_name'],
-      lastName: json['last_name'],
-      email: json['email'],
-      phone: json['phone'],
-      status: json['status'],
+      id: json['id']?.toString() ?? json['uuid']?.toString() ?? '',
+      firstName: json['first_name']?.toString() ?? defaultFirst,
+      lastName: json['last_name']?.toString() ?? defaultLast,
+      email: json['email']?.toString() ?? '',
+      phone: json['phone']?.toString(),
+      status: json['status']?.toString() ?? 'active',
       emailVerifiedAt: json['email_verified_at'] != null
-          ? DateTime.parse(json['email_verified_at'])
+          ? DateTime.tryParse(json['email_verified_at'].toString())
           : null,
       phoneVerifiedAt: json['phone_verified_at'] != null
-          ? DateTime.parse(json['phone_verified_at'])
+          ? DateTime.tryParse(json['phone_verified_at'].toString())
           : null,
-      roles: List<String>.from(json['roles'] ?? []),
+      roles: json['roles'] != null
+          ? List<String>.from(json['roles'])
+          : ['customer'],
     );
   }
 

@@ -114,16 +114,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     FocusScope.of(context).unfocus();
-    final success = await ref.read(authProvider.notifier).signInWithGoogle();
-    if (mounted && success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Google Sign-In successful! Welcome to GOSIKA.'),
-          backgroundColor: AppColors.successGreen,
-        ),
-      );
-      context.go('/');
-    }
+    context.push('/auth/google-webview');
   }
 
   @override
@@ -359,25 +350,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Social Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SocialLoginButton(
-                              provider: SocialProvider.google,
-                              text: 'Continue with Google',
-                              onTap: _handleGoogleSignIn,
-                              isLoading: ref.watch(authProvider).isLoading,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: SocialLoginButton(
-                              provider: SocialProvider.facebook,
-                              text: 'Facebook',
-                            ),
-                          ),
-                        ],
+                      // Social Button
+                      SocialLoginButton(
+                        provider: SocialProvider.google,
+                        text: 'Continue with Google',
+                        onTap: _handleGoogleSignIn,
+                        isLoading: ref.watch(authProvider).isLoading,
                       ),
                       const SizedBox(height: 24),
 

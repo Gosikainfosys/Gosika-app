@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/theme/app_colors.dart';
-import '../providers/auth_provider.dart';
 import '../shared/widgets/decorative_background.dart';
 import '../shared/widgets/gosika_logo.dart';
 
@@ -58,12 +57,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!onboardingCompleted) {
       if (mounted) context.go('/onboarding');
     } else {
-      final authState = ref.read(authProvider);
-      if (authState.isAuthenticated) {
-        if (mounted) context.go('/');
-      } else {
-        if (mounted) context.go('/welcome');
-      }
+      if (mounted) context.go('/');
     }
   }
 

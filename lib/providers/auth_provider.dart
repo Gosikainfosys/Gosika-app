@@ -1,3 +1,4 @@
+import 'package:app_links/app_links.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api_client.dart';
 import '../models/user.dart';
@@ -35,9 +36,46 @@ class AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
+  final AppLinks _appLinks = AppLinks();
 
   AuthNotifier(this._authService) : super(AuthState(isLoading: true)) {
     checkAuth();
+    _initDeepLinks();
+  }
+
+  void _initDeepLinks() {
+    _appLinks.uriLinkStream.listen((uri) async {
+      if (uri.host == 'social-auth') {
+        final token = uri.queryParameters['token'];
+        if (token != null && token.isNotEmpty) {
+          await handleSocialToken(token);
+        }
+      }
+    });
+
+    _appLinks.getInitialLink().then((uri) async {
+      if (uri != null && uri.host == 'social-auth') {
+        final token = uri.queryParameters['token'];
+        if (token != null && token.isNotEmpty) {
+          await handleSocialToken(token);
+        }
+      }
+    });
+  }
+
+  Future<void> handleSocialToken(String token) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _authService.handleSocialToken(token);
+      final user = await _authService.getMe();
+      state = AuthState(user: user, isLoading: false);
+    } catch (e) {
+      state = AuthState(
+        user: null,
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
   }
 
   Future<void> checkAuth() async {
@@ -70,12 +108,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> signInWithGoogle() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final result = await _authService.signInWithGoogle();
-      if (result == null) {
-        state = state.copyWith(isLoading: false);
-        return false;
-      }
-      state = AuthState(user: result.user, isLoading: false);
+      await _authService.signInWithGoogle();
+      state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
       state = AuthState(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_assets.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 
@@ -94,11 +95,17 @@ class GoogleLogoIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: 20,
-      child: CustomPaint(
-        painter: _GoogleLogoPainter(),
+    return Image.asset(
+      AppAssets.googleIcon,
+      width: 22,
+      height: 22,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => SizedBox(
+        width: 20,
+        height: 20,
+        child: CustomPaint(
+          painter: _GoogleLogoPainter(),
+        ),
       ),
     );
   }
