@@ -363,9 +363,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               value: val,
               groupValue: _selectedPayment,
               onChanged: (v) => setState(() => _selectedPayment = v!),
-              activeColor: const Color(0xFFFF5722),
+              activeColor: AppColors.primaryOrange,
             ),
-            Icon(icon, color: isSelected ? const Color(0xFFFF5722) : Colors.grey[600], size: 20),
+            if (val == 'esewa')
+              Image.asset(
+                'assets/illustrations/esewa_icon.png',
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(icon, color: isSelected ? AppColors.primaryOrange : Colors.grey[600], size: 20),
+              )
+            else
+              Icon(icon, color: isSelected ? AppColors.primaryOrange : Colors.grey[600], size: 20),
             const SizedBox(width: 10),
             Text(
               title,

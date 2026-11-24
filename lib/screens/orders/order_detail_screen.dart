@@ -820,6 +820,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     final statusColor = status.toLowerCase() == 'paid' || status.toLowerCase() == 'completed'
         ? Colors.green
         : (status.toLowerCase() == 'pending' ? Colors.orange : Colors.red);
+    final isEsewa = method.toLowerCase().contains('esewa');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,7 +839,16 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.payment_rounded, color: Colors.grey[600], size: 20),
+                  if (isEsewa)
+                    Image.asset(
+                      'assets/illustrations/esewa_icon.png',
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(Icons.payment_rounded, color: Colors.grey[600], size: 20),
+                    )
+                  else
+                    Icon(Icons.payment_rounded, color: Colors.grey[600], size: 20),
                   const SizedBox(width: 8),
                   Text(
                     method.toUpperCase(),
