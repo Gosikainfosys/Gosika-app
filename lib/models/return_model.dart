@@ -43,6 +43,55 @@ class ReturnRequest {
     this.reviewedAt,
   });
 
+  String get formattedRequestTypeLabel {
+    if (requestTypeLabel != null && requestTypeLabel!.isNotEmpty) {
+      return requestTypeLabel!;
+    }
+    switch (requestType.toLowerCase()) {
+      case 'return_refund':
+      case 'return':
+        return 'Return & Refund';
+      case 'exchange':
+        return 'Exchange';
+      case 'replacement':
+        return 'Replacement';
+      default:
+        return requestType.replaceAll('_', ' ').toUpperCase();
+    }
+  }
+
+  String get formattedStatusLabel {
+    if (statusLabel != null && statusLabel!.isNotEmpty) {
+      return statusLabel!;
+    }
+    switch (status.toLowerCase()) {
+      case 'requested':
+        return 'Requested';
+      case 'under_review':
+        return 'Under Review';
+      case 'approved':
+        return 'Approved';
+      case 'pickup_arranged':
+        return 'Pickup Arranged';
+      case 'collected':
+        return 'Collected';
+      case 'inspected':
+        return 'Inspected';
+      case 'refund_pending':
+        return 'Refund Pending';
+      case 'refunded':
+        return 'Refunded';
+      case 'completed':
+        return 'Completed';
+      case 'rejected':
+        return 'Rejected';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status.replaceAll('_', ' ').toUpperCase();
+    }
+  }
+
   factory ReturnRequest.fromJson(Map<String, dynamic> json) {
     final rawImg = json['product_image']?.toString();
 

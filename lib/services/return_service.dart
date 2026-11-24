@@ -1,4 +1,5 @@
 import '../core/api_client.dart';
+import '../models/product.dart';
 import '../models/return_model.dart';
 
 class ReturnService {
@@ -6,13 +7,35 @@ class ReturnService {
 
   ReturnService(this._apiClient);
 
-  Future<List<ReturnRequest>> getReturns({int perPage = 15}) async {
+  Future<PaginatedResponse<ReturnRequest>> getReturns({
+    int page = 1,
+    int perPage = 15,
+    String? status,
+    String? requestType,
+    String? search,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
     try {
       final response = await _apiClient.dio.get('/customer/returns', queryParameters: {
+        'page': page,
         'per_page': perPage,
+        if (status != null && status.isNotEmpty) 'status': status,
+        if (requestType != null && requestType.isNotEmpty) 'request_type': requestType,
+        if (search != null && search.isNotEmpty) 'search': search,
+        if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
+        if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
       });
+
       final List data = response.data['data'] as List? ?? [];
-      return data.map((e) => ReturnRequest.fromJson(e as Map<String, dynamic>)).toList();
+      final returns = data.map((e) => ReturnRequest.fromJson(e as Map<String, dynamic>)).toList();
+
+      PaginationMeta meta = PaginationMeta(currentPage: page, lastPage: 1, total: returns.length, perPage: perPage);
+      if (response.data['meta'] != null) {
+        meta = PaginationMeta.fromJson(response.data['meta']);
+      }
+
+      return PaginatedResponse(data: returns, meta: meta);
     } catch (e) {
       throw ApiClient.parseError(e);
     }

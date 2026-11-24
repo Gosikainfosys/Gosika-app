@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +6,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
+import '../../core/payment_utils.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/scrollable_filter_tabs.dart';
 import '../../models/order.dart';
 import '../../providers/order_provider.dart';
 
@@ -18,6 +21,13 @@ class OrderListScreen extends ConsumerStatefulWidget {
 
 class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   int _selectedTabIndex = 0;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+  String _searchQuery = '';
+  DateTimeRange? _selectedDateRange;
+  String? _dateFrom;
+  String? _dateTo;
+
   final List<String?> _statuses = [
     null,
     'pending',
@@ -40,7 +50,88 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   ];
 
   @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _searchQuery = value.trim();
+        });
+      }
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    setState(() {
+      _searchQuery = '';
+    });
+  }
+
+  Future<void> _selectDateRange() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+      initialDateRange: _selectedDateRange,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryOrange,
+              onPrimary: Colors.white,
+              onSurface: kNavy,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDateRange = picked;
+        _dateFrom = DateFormat('yyyy-MM-dd').format(picked.start);
+        _dateTo = DateFormat('yyyy-MM-dd').format(picked.end);
+      });
+    }
+  }
+
+  void _clearDateRange() {
+    setState(() {
+      _selectedDateRange = null;
+      _dateFrom = null;
+      _dateTo = null;
+    });
+  }
+
+  String get _formattedDateRangeText {
+    if (_selectedDateRange == null) return 'Date Range';
+    final start = _selectedDateRange!.start;
+    final end = _selectedDateRange!.end;
+    if (start.year == end.year) {
+      return '${DateFormat('MMM dd').format(start)} – ${DateFormat('MMM dd').format(end)}';
+    } else {
+      return '${DateFormat('MMM dd, yyyy').format(start)} – ${DateFormat('MMM dd, yyyy').format(end)}';
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final filter = OrderFilter(
+      status: _statuses[_selectedTabIndex],
+      search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+    );
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -50,54 +141,129 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
       ),
       body: Column(
         children: [
-          // Filter Chips Row
+          // 1. Filter Chips Row
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: SizedBox(
-              height: 38,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _tabLabels.length,
-                itemBuilder: (context, index) {
-                  final isSelected = _selectedTabIndex == index;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(
-                        _tabLabels[index],
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : kNavy,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          fontSize: 12,
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            child: ScrollableFilterTabs(
+              labels: _tabLabels,
+              selectedIndex: _selectedTabIndex,
+              onTabSelected: (index) {
+                setState(() {
+                  _selectedTabIndex = index;
+                });
+              },
+            ),
+          ),
+
+          // 2. Search Box & Date Range Filter Row
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search TextField
+                Container(
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    style: const TextStyle(fontSize: 13, color: kNavy),
+                    decoration: InputDecoration(
+                      hintText: 'Search by order number or product name',
+                      hintStyle: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      prefixIcon: const Icon(Icons.search, size: 20, color: kMuted),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18, color: kMuted),
+                              onPressed: _clearSearch,
+                              splashRadius: 18,
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Date Range Button Row
+                Row(
+                  children: [
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _selectDateRange,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _selectedDateRange != null
+                                ? AppColors.primaryOrange.withValues(alpha: 0.1)
+                                : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _selectedDateRange != null
+                                  ? AppColors.primaryOrange
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: _selectedDateRange != null
+                                    ? AppColors.primaryOrange
+                                    : kNavy,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _formattedDateRangeText,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: _selectedDateRange != null
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  color: _selectedDateRange != null
+                                      ? AppColors.primaryOrange
+                                      : kNavy,
+                                ),
+                              ),
+                              if (_selectedDateRange != null) ...[
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: _clearDateRange,
+                                  child: const Icon(
+                                    Icons.cancel,
+                                    size: 16,
+                                    color: AppColors.primaryOrange,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _selectedTabIndex = index;
-                          });
-                        }
-                      },
-                      selectedColor: AppColors.primaryOrange,
-                      backgroundColor: Colors.grey[100],
-                      side: BorderSide.none,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      showCheckmark: false,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     ),
-                  );
-                },
-              ),
+                  ],
+                ),
+              ],
             ),
           ),
           const Divider(height: 1),
 
-          // Order List Content
+          // 3. Order List Content
           Expanded(
-            child: _OrderListContent(status: _statuses[_selectedTabIndex]),
+            child: _OrderListContent(filter: filter),
           ),
         ],
       ),
@@ -106,8 +272,8 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
 }
 
 class _OrderListContent extends ConsumerStatefulWidget {
-  final String? status;
-  const _OrderListContent({this.status});
+  final OrderFilter filter;
+  const _OrderListContent({required this.filter});
 
   @override
   ConsumerState<_OrderListContent> createState() => _OrderListContentState();
@@ -130,13 +296,13 @@ class _OrderListContentState extends ConsumerState<_OrderListContent> {
 
   void _onScroll() {
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-      ref.read(orderListProvider(widget.status).notifier).fetchNextPage();
+      ref.read(orderListProvider(widget.filter).notifier).fetchNextPage();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(orderListProvider(widget.status));
+    final state = ref.watch(orderListProvider(widget.filter));
 
     if (state.isLoading && state.orders.isEmpty) {
       return const Center(
@@ -147,7 +313,7 @@ class _OrderListContentState extends ConsumerState<_OrderListContent> {
     if (state.orders.isEmpty) {
       return RefreshIndicator(
         color: AppColors.primaryOrange,
-        onRefresh: () => ref.read(orderListProvider(widget.status).notifier).fetchOrders(),
+        onRefresh: () => ref.read(orderListProvider(widget.filter).notifier).fetchOrders(),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
@@ -159,7 +325,7 @@ class _OrderListContentState extends ConsumerState<_OrderListContent> {
                   const SizedBox(height: 16),
                   const Text('No orders found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kNavy)),
                   const SizedBox(height: 4),
-                  const Text('When you place orders, they will appear here.', style: TextStyle(color: kMuted, fontSize: 13)),
+                  const Text('Try adjusting your search or date filter.', style: TextStyle(color: kMuted, fontSize: 13)),
                 ],
               ),
             ),
@@ -170,7 +336,7 @@ class _OrderListContentState extends ConsumerState<_OrderListContent> {
 
     return RefreshIndicator(
       color: AppColors.primaryOrange,
-      onRefresh: () => ref.read(orderListProvider(widget.status).notifier).fetchOrders(),
+      onRefresh: () => ref.read(orderListProvider(widget.filter).notifier).fetchOrders(),
       child: ListView.separated(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -251,6 +417,37 @@ class _OrderCard extends StatelessWidget {
               Text(
                 _formatDate(order.placedAt),
                 style: TextStyle(color: Colors.grey[600], fontSize: 11),
+              ),
+
+              // Payment Method Icon & Payment Status Row
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  paymentMethodIcon(order.paymentMethod),
+                  if (order.paymentMethod.toLowerCase() != 'cod') ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      getPaymentMethodLabel(order.paymentMethod),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: getPaymentStatusColor(order.paymentStatus).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      order.paymentStatus.replaceAll('_', ' ').toUpperCase(),
+                      style: TextStyle(
+                        color: getPaymentStatusColor(order.paymentStatus),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               // First Item Preview

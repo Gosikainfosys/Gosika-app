@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
+import '../../core/payment_utils.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/order.dart';
 import '../../providers/order_provider.dart';
@@ -423,7 +424,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     int currentIndex = -1;
     for (int i = 0; i < steps.length; i++) {
       final key = steps[i]['key'] as String;
-      final aliases = (steps[i]['aliases'] as List).cast<String>();
+      final aliases = List<String>.from(steps[i]['aliases'] as List);
       if (s == key || aliases.contains(s)) {
         currentIndex = i;
         break;
@@ -817,10 +818,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   // Section G: Payment Info
   Widget _buildPaymentInfoSection(String method, String status) {
-    final statusColor = status.toLowerCase() == 'paid' || status.toLowerCase() == 'completed'
-        ? Colors.green
-        : (status.toLowerCase() == 'pending' ? Colors.orange : Colors.red);
-    final isEsewa = method.toLowerCase().contains('esewa');
+    final statusColor = getPaymentStatusColor(status);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -839,21 +837,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             children: [
               Row(
                 children: [
-                  if (isEsewa)
-                    Image.asset(
-                      'assets/illustrations/esewa_icon.png',
-                      width: 24,
-                      height: 24,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Icon(Icons.payment_rounded, color: Colors.grey[600], size: 20),
-                    )
-                  else
-                    Icon(Icons.payment_rounded, color: Colors.grey[600], size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    method.toUpperCase(),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: kNavy),
-                  ),
+                  paymentMethodIcon(method),
+                  if (method.toLowerCase() != 'cod') ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      getPaymentMethodLabel(method),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: kNavy),
+                    ),
+                  ],
                 ],
               ),
               Container(
@@ -863,7 +854,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  status.toUpperCase(),
+                  status.replaceAll('_', ' ').toUpperCase(),
                   style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),

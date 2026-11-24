@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../widgets/cart_icon_badge.dart';
+import '../../../widgets/cart_bottom_sheet.dart';
 
 class FloatingBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemTapped;
+  final GlobalKey? cartIconKey;
 
   const FloatingBottomNav({
     super.key,
     required this.selectedIndex,
     required this.onItemTapped,
+    this.cartIconKey,
   });
 
   @override
@@ -57,13 +61,8 @@ class FloatingBottomNav extends StatelessWidget {
                 // Space reserved for Central Floating Home Button
                 const SizedBox(width: 52),
 
-                // Item 3: Cart
-                _buildNavItem(
-                  index: 3,
-                  icon: Icons.shopping_cart_outlined,
-                  activeIcon: Icons.shopping_cart_rounded,
-                  label: 'Cart',
-                ),
+                // Item 3: Cart (with reactive badge and animation)
+                _buildCartNavItem(context, index: 3, label: 'Cart'),
 
                 // Item 4: Account
                 _buildNavItem(
@@ -101,6 +100,43 @@ class FloatingBottomNav extends StatelessWidget {
                   size: selectedIndex == 2 ? 30 : 26,
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartNavItem(BuildContext context, {required int index, required String label}) {
+    final isSelected = selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          CartBottomSheet.show(context);
+        });
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CartIconBadge(
+            iconKey: cartIconKey,
+            iconColor: isSelected ? AppColors.primaryOrange : AppColors.secondaryText,
+            size: 22,
+            onTap: () {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                CartBottomSheet.show(context);
+              });
+            },
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(
+              fontSize: 10,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? AppColors.primaryOrange : AppColors.secondaryText,
             ),
           ),
         ],

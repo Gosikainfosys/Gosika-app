@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as rp;
+import 'package:provider/provider.dart' as p;
 import 'core/theme.dart';
 import 'core/router.dart';
 import 'providers/platform_provider.dart';
+import 'providers/cart_provider.dart';
 import 'shared/widgets/gosika_logo.dart';
 
 void main() {
@@ -18,17 +20,22 @@ void main() {
   );
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(
-    const ProviderScope(
-      child: GosikaApp(),
+    rp.ProviderScope(
+      child: p.MultiProvider(
+        providers: [
+          p.ChangeNotifierProvider(create: (_) => CartProvider()),
+        ],
+        child: const GosikaApp(),
+      ),
     ),
   );
 }
 
-class GosikaApp extends ConsumerWidget {
+class GosikaApp extends rp.ConsumerWidget {
   const GosikaApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, rp.WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final platformConfig = ref.watch(platformConfigProvider);
 

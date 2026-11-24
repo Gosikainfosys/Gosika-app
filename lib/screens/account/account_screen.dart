@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -8,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../message/message_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
@@ -322,6 +324,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               _buildMenuCard([
                 _buildMenuItem(Icons.assignment_outlined, 'My Orders', () => context.push('/orders')),
                 _buildDivider(),
+                _buildMenuItem(Icons.assignment_return_outlined, 'My Returns', () => context.push('/account/returns')),
+                _buildDivider(),
                 _buildMenuItem(Icons.favorite_border_rounded, 'Wishlist', () => context.push('/wishlist')),
                 _buildDivider(),
                 _buildMenuItem(Icons.location_on_outlined, 'Address Book', () => context.push('/account/addresses')),
@@ -362,6 +366,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     if (user != null) {
                       await ref.read(authProvider.notifier).logout();
                       if (context.mounted) {
+                        context.read<CartProvider>().clearCart();
                         context.go('/login');
                       }
                     } else {
@@ -422,20 +427,24 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Widget _buildMenuCard(List<Widget> children) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(children: children),
         ),
-        child: Column(children: children),
       ),
     );
   }

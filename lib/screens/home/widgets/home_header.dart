@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../widgets/cart_icon_badge.dart';
+import '../../../widgets/cart_bottom_sheet.dart';
 
 class HomeHeader extends StatelessWidget {
   final VoidCallback? onNotificationTap;
   final VoidCallback? onCartTap;
+  final GlobalKey? cartIconKey;
 
   const HomeHeader({
     super.key,
     this.onNotificationTap,
     this.onCartTap,
+    this.cartIconKey,
   });
 
   @override
@@ -89,11 +93,28 @@ class HomeHeader extends StatelessWidget {
                     onTap: onNotificationTap,
                   ),
                   const SizedBox(width: 8),
-                  // Cart Badge
-                  _buildIconButton(
-                    icon: Icons.shopping_cart_outlined,
-                    badgeCount: 3,
-                    onTap: onCartTap,
+
+                  // Cart Badge (With real reactive badge count & animation)
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: AppColors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x12000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: CartIconBadge(
+                        iconKey: cartIconKey,
+                        onTap: onCartTap ?? () => CartBottomSheet.show(context),
+                      ),
+                    ),
                   ),
                 ],
               ),

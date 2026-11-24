@@ -21,7 +21,7 @@ class WishlistItem {
 
     return WishlistItem(
       id: json['id']?.toString() ?? '',
-      productId: json['product_id']?.toString() ?? json['id']?.toString() ?? '',
+      productId: json['product_id']?.toString() ?? json['id']?.toString() ?? prodObj.id,
       product: prodObj,
       addedAt: json['added_at'] != null ? DateTime.tryParse(json['added_at'].toString()) : null,
     );
@@ -54,7 +54,8 @@ class WishlistService {
   Future<bool> addToWishlist(String productId) async {
     try {
       final response = await _apiClient.dio.post('/wishlist/items', data: {'product_id': productId});
-      return response.data?['data']?['wishlisted'] == true;
+      final resData = response.data?['data'];
+      return resData is Map ? resData['wishlisted'] == true : true;
     } catch (e) {
       throw ApiClient.parseError(e);
     }
@@ -63,7 +64,8 @@ class WishlistService {
   Future<bool> removeFromWishlist(String productId) async {
     try {
       final response = await _apiClient.dio.delete('/wishlist/items', data: {'product_id': productId});
-      return response.data?['data']?['wishlisted'] == true;
+      final resData = response.data?['data'];
+      return resData is Map ? resData['wishlisted'] == true : false;
     } catch (e) {
       throw ApiClient.parseError(e);
     }
@@ -72,7 +74,8 @@ class WishlistService {
   Future<bool> checkStatus(String productId) async {
     try {
       final response = await _apiClient.dio.get('/wishlist/status/$productId');
-      return response.data?['data']?['wishlisted'] == true;
+      final resData = response.data?['data'];
+      return resData is Map ? resData['wishlisted'] == true : false;
     } catch (e) {
       return false;
     }

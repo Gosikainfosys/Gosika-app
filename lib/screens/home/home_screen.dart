@@ -9,6 +9,8 @@ import '../../core/theme/app_colors.dart';
 import '../../models/deal_product.dart';
 import '../../models/product.dart';
 import '../../providers/catalog_provider.dart';
+import '../../widgets/cart_icon_badge.dart';
+import '../../widgets/cart_bottom_sheet.dart';
 import 'widgets/category_carousel.dart';
 import 'widgets/modern_product_card.dart';
 import 'widgets/promo_banner.dart';
@@ -23,6 +25,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final GlobalKey _cartIconKey = GlobalKey();
+
   static const List<ModernProductData> _fallbackDeals = [
     ModernProductData(
       id: 'watermelon-1kg',
@@ -129,6 +133,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final img = ApiClient.apiImage(deal.imageUrl);
     final disc = deal.discountPercentage > 0 ? '-${deal.discountPercentage}%' : '';
 
+    final product = Product(
+      id: deal.id,
+      name: deal.name,
+      slug: deal.slug,
+      shortDescription: deal.brandName,
+      price: deal.price,
+      compareAtPrice: deal.compareAtPrice,
+      image: img,
+      images: img.isNotEmpty ? [img] : [],
+      variants: [],
+      ratingAvg: deal.ratingAvg,
+      ratingCount: deal.ratingCount,
+      isFeatured: false,
+      status: 'active',
+      stockStatus: deal.stockStatus,
+    );
+
     return ModernProductData(
       id: deal.id,
       title: deal.name,
@@ -141,6 +162,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       discountBadge: disc,
       rating: deal.ratingAvg > 0 ? deal.ratingAvg : 4.5,
       reviewsCount: deal.ratingCount > 0 ? deal.ratingCount : 120,
+      originalProduct: product,
     );
   }
 
@@ -162,6 +184,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       discountBadge: discPercentage > 0 ? '-$discPercentage%' : '',
       rating: product.ratingAvg > 0 ? product.ratingAvg : 4.6,
       reviewsCount: product.ratingCount > 0 ? product.ratingCount : 90,
+      originalProduct: product,
     );
   }
 
@@ -193,9 +216,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               pinned: true,
               delegate: _StickyHomeHeaderDelegate(
                 topPadding: mediaTopPadding,
+                cartIconKey: _cartIconKey,
                 onSearchTap: () => context.push('/search'),
                 onProfileTap: () => context.push('/account'),
-                onCartTap: () => context.push('/cart'),
+                onCartTap: () {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    CartBottomSheet.show(context);
+                  });
+                },
               ),
             ),
 
@@ -264,7 +292,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ? deals.map(_mapDealProduct).toList()
                             : _fallbackDeals;
                         return SizedBox(
-                          height: 260,
+                          height: 250,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -272,14 +300,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             itemBuilder: (context, index) {
                               return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: ModernProductCard(product: list[index]),
+                                child: ModernProductCard(
+                                  product: list[index],
+                                  cartIconKey: _cartIconKey,
+                                ),
                               );
                             },
                           ),
                         );
                       },
                       loading: () => SizedBox(
-                        height: 260,
+                        height: 250,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -287,13 +318,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           itemBuilder: (context, index) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: ModernProductCard(product: _fallbackDeals[index]),
+                              child: ModernProductCard(
+                                product: _fallbackDeals[index],
+                                cartIconKey: _cartIconKey,
+                              ),
                             );
                           },
                         ),
                       ),
                       error: (err, stack) => SizedBox(
-                        height: 260,
+                        height: 250,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -301,7 +335,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           itemBuilder: (context, index) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: ModernProductCard(product: _fallbackDeals[index]),
+                              child: ModernProductCard(
+                                product: _fallbackDeals[index],
+                                cartIconKey: _cartIconKey,
+                              ),
                             );
                           },
                         ),
@@ -325,7 +362,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ? products.map(_mapProduct).toList()
                             : _fallbackFeatured;
                         return SizedBox(
-                          height: 260,
+                          height: 250,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -333,14 +370,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             itemBuilder: (context, index) {
                               return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: ModernProductCard(product: list[index]),
+                                child: ModernProductCard(
+                                  product: list[index],
+                                  cartIconKey: _cartIconKey,
+                                ),
                               );
                             },
                           ),
                         );
                       },
                       loading: () => SizedBox(
-                        height: 260,
+                        height: 250,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -348,13 +388,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           itemBuilder: (context, index) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: ModernProductCard(product: _fallbackFeatured[index]),
+                              child: ModernProductCard(
+                                product: _fallbackFeatured[index],
+                                cartIconKey: _cartIconKey,
+                              ),
                             );
                           },
                         ),
                       ),
                       error: (err, stack) => SizedBox(
-                        height: 260,
+                        height: 250,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -362,7 +405,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           itemBuilder: (context, index) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: ModernProductCard(product: _fallbackFeatured[index]),
+                              child: ModernProductCard(
+                                product: _fallbackFeatured[index],
+                                cartIconKey: _cartIconKey,
+                              ),
                             );
                           },
                         ),
@@ -393,12 +439,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             itemCount: list.length,
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
-                              childAspectRatio: 0.68,
+                              childAspectRatio: 0.72,
                               crossAxisSpacing: 8,
                               mainAxisSpacing: 8,
                             ),
                             itemBuilder: (context, index) {
-                              return ModernProductCard(product: list[index]);
+                              return ModernProductCard(
+                                product: list[index],
+                                cartIconKey: _cartIconKey,
+                              );
                             },
                           ),
                         );
@@ -411,7 +460,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           itemCount: 4,
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.68,
+                            childAspectRatio: 0.65,
                             crossAxisSpacing: 8,
                             mainAxisSpacing: 8,
                           ),
@@ -446,12 +495,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
 class _StickyHomeHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double topPadding;
+  final GlobalKey cartIconKey;
   final VoidCallback onSearchTap;
   final VoidCallback onProfileTap;
   final VoidCallback onCartTap;
 
   _StickyHomeHeaderDelegate({
     required this.topPadding,
+    required this.cartIconKey,
     required this.onSearchTap,
     required this.onProfileTap,
     required this.onCartTap,
@@ -626,46 +677,12 @@ class _StickyHomeHeaderDelegate extends SliverPersistentHeaderDelegate {
                     ),
                   ),
 
-                  // Cart Icon with Badge
-                  GestureDetector(
+                  // Reactive Cart Icon with Bounce Animation & Dynamic Badge
+                  CartIconBadge(
+                    iconKey: cartIconKey,
                     onTap: onCartTap,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          child: const Icon(
-                            Icons.shopping_bag_outlined,
-                            color: AppColors.darkText,
-                            size: 23,
-                          ),
-                        ),
-                        Positioned(
-                          top: 2,
-                          right: 2,
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              color: AppColors.primaryOrange,
-                              shape: BoxShape.circle,
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 15,
-                              minHeight: 15,
-                            ),
-                            child: const Text(
-                              '0',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: AppColors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    iconColor: AppColors.darkText,
+                    size: 23,
                   ),
                 ],
               ),
@@ -678,6 +695,6 @@ class _StickyHomeHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _StickyHomeHeaderDelegate oldDelegate) {
-    return topPadding != oldDelegate.topPadding;
+    return topPadding != oldDelegate.topPadding || cartIconKey != oldDelegate.cartIconKey;
   }
 }

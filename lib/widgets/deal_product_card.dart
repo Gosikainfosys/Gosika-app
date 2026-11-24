@@ -4,80 +4,106 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants.dart';
 import '../models/deal_product.dart';
+import '../models/product.dart';
 import '../core/api_client.dart';
-import '../providers/wishlist_provider.dart';
+import 'wishlist_heart_button.dart';
+import 'add_to_cart_button.dart';
 
-class DealProductCard extends ConsumerWidget {
+class DealProductCard extends ConsumerStatefulWidget {
   final DealProduct product;
-  final VoidCallback? onAddToCart;
   final double? width;
+  final GlobalKey? cartIconKey;
 
   const DealProductCard({
     super.key,
     required this.product,
-    this.onAddToCart,
     this.width,
+    this.cartIconKey,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final discount = product.discountPercentage;
+  ConsumerState<DealProductCard> createState() => _DealProductCardState();
+}
 
-    final isWishlisted = ref.watch(wishlistProvider).maybeWhen(
-          data: (items) => items.any((item) => item.id == product.id),
-          orElse: () => false,
-        );
+class _DealProductCardState extends ConsumerState<DealProductCard> {
+  final GlobalKey _imageKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    final deal = widget.product;
+    final discount = deal.discountPercentage;
+
+    // Convert DealProduct to Product model so AddToCartButton works seamlessly
+    final productModel = Product(
+      id: deal.id,
+      name: deal.name,
+      slug: deal.id,
+      price: deal.price,
+      compareAtPrice: deal.compareAtPrice,
+      image: deal.imageUrl,
+      images: deal.imageUrl != null ? [deal.imageUrl!] : [],
+      variants: [],
+      ratingAvg: deal.ratingAvg,
+      ratingCount: deal.ratingCount,
+      isFeatured: false,
+      status: 'active',
+      stockStatus: deal.stockStatus,
+    );
 
     return GestureDetector(
-      onTap: () => context.push('/products/${product.id}'),
+      onTap: () => context.push('/products/${deal.id}'),
       child: Container(
-        width: width ?? 175,
+        width: widget.width ?? 175,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Color(0x0A000000),
               blurRadius: 8,
-              offset: const Offset(0, 2),
+              offset: Offset(0, 2),
             ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Image with badges
+            // Image with badges and wishlist button
             Stack(
               children: [
                 AspectRatio(
                   aspectRatio: 1.25,
-                  child: CachedNetworkImage(
-                    imageUrl: ApiClient.apiImage(product.imageUrl),
-                    fit: BoxFit.cover,
-                    httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[100],
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Color(0xFFFF5722)),
+                  child: KeyedSubtree(
+                    key: _imageKey,
+                    child: CachedNetworkImage(
+                      imageUrl: ApiClient.apiImage(deal.imageUrl),
+                      fit: BoxFit.cover,
+                      httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[100],
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Color(0xFFFF5722)),
+                          ),
                         ),
                       ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[100],
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.image_not_supported_outlined, color: Colors.grey[400], size: 28),
-                          const SizedBox(height: 2),
-                          Text(
-                            'No Image',
-                            style: TextStyle(fontSize: 9, color: Colors.grey[500]),
-                          ),
-                        ],
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[100],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.image_not_supported_outlined, color: Colors.grey[400], size: 28),
+                            const SizedBox(height: 2),
+                            Text(
+                              'No Image',
+                              style: TextStyle(fontSize: 9, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -108,31 +134,11 @@ class DealProductCard extends ConsumerWidget {
                   ),
                 // Wishlist button
                 Positioned(
-                  top: 8,
-                  right: 8,
-                  child: InkWell(
-                    onTap: () {
-                      ref.read(wishlistProvider.notifier).toggleWishlist(product.id);
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        isWishlisted ? Icons.favorite : Icons.favorite_border,
-                        size: 16,
-                        color: isWishlisted ? const Color(0xFFFF5722) : Colors.grey[600],
-                      ),
-                    ),
+                  top: 6,
+                  right: 6,
+                  child: WishlistHeartButton(
+                    productId: deal.id,
+                    size: 18,
                   ),
                 ),
               ],
@@ -145,7 +151,7 @@ class DealProductCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.name,
+                    deal.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -155,72 +161,64 @@ class DealProductCard extends ConsumerWidget {
                       color: kInk,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
 
                   // Rating Row
                   Row(
                     children: [
-                      ...List.generate(5, (index) {
-                        return Icon(
-                          index < product.ratingAvg.floor() ? Icons.star : Icons.star_border,
-                          size: 12,
-                          color: Colors.amber[700],
-                        );
-                      }),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFB800)),
+                      const SizedBox(width: 2),
                       Text(
-                        '(${product.ratingCount})',
+                        '${deal.ratingAvg.toStringAsFixed(1)}',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kInk),
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        '(${deal.ratingCount})',
                         style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
 
-                  // Price Row + Cart Button
+                  // Price Row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (product.compareAtPrice != null && product.compareAtPrice! > product.price)
-                            Text(
-                              formatNPR(product.compareAtPrice!),
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[500],
-                                decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
-                          Text(
-                            formatNPR(product.price),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF5722),
-                            ),
-                          ),
-                        ],
-                      ),
-                      InkWell(
-                        onTap: onAddToCart,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3E0),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFFF5722).withOpacity(0.2)),
-                          ),
-                          child: const Icon(
-                            Icons.shopping_cart_outlined,
-                            size: 16,
-                            color: Color(0xFFFF5722),
-                          ),
+                      Text(
+                        formatNPR(deal.price),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF5722),
                         ),
                       ),
+                      if (deal.compareAtPrice != null && deal.compareAtPrice! > deal.price) ...[
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            formatNPR(deal.compareAtPrice!),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  AddToCartButton(
+                    product: productModel,
+                    productImageKey: _imageKey,
+                    cartIconKey: widget.cartIconKey,
+                    fullWidth: true,
+                    compact: true,
+                    showQuantityStepperWhenInCart: true,
                   ),
                 ],
               ),

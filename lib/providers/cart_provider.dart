@@ -1,67 +1,74 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'auth_provider.dart';
-import '../models/cart.dart';
-import '../services/cart_service.dart';
+import 'package:flutter/material.dart';
+import '../models/cart_item.dart';
+import '../models/product.dart';
 
-final cartServiceProvider = Provider((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return CartService(apiClient);
-});
+class CartProvider extends ChangeNotifier {
+  final List<CartItem> _items = [];
 
-final cartProvider = StateNotifierProvider<CartNotifier, AsyncValue<Cart>>((ref) {
-  final service = ref.watch(cartServiceProvider);
-  return CartNotifier(service);
-});
+  List<CartItem> get items => _items;
+  int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
+  double get subtotal => _items.fold(0.0, (sum, item) => sum + item.totalPrice);
+  bool get isLoading => false;
+  String? get error => null;
 
-class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
-  final CartService _service;
+  void addItem(Product product, {int quantity = 1, String? variantName}) {
+    final index = _items.indexWhere((i) => i.productId == product.id && i.variantName == variantName);
+    if (index >= 0) {
+      final existing = _items[index];
+      _items[index] = existing.copyWith(quantity: existing.quantity + quantity);
+    } else {
+      _items.add(CartItem(
+        id: '${product.id}_${variantName ?? 'default'}',
+        productId: product.id,
+        name: product.name,
+        image: product.image ?? (product.images.isNotEmpty ? product.images.first : null),
+        unitPrice: product.price,
+        quantity: quantity,
+        variantName: variantName,
+      ));
+    }
+    notifyListeners();
+  }
 
-  CartNotifier(this._service) : super(const AsyncValue.loading()) {
-    fetchCart();
+  void updateQuantity(String id, int quantity) {
+    if (quantity <= 0) {
+      removeItem(id);
+      return;
+    }
+    final index = _items.indexWhere((i) => i.id == id);
+    if (index >= 0) {
+      _items[index] = _items[index].copyWith(quantity: quantity);
+      notifyListeners();
+    }
+  }
+
+  void removeItem(String id) {
+    _items.removeWhere((i) => i.id == id);
+    notifyListeners();
+  }
+
+  void clearCart() {
+    _items.clear();
+    notifyListeners();
+  }
+
+  bool isInCart(String productId) {
+    return _items.any((i) => i.productId == productId);
+  }
+
+  CartItem? getItemByProduct(String productId) {
+    try {
+      return _items.firstWhere((i) => i.productId == productId);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> fetchCart() async {
-    state = const AsyncValue.loading();
-    try {
-      final cart = await _service.getCart();
-      state = AsyncValue.data(cart);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    notifyListeners();
   }
 
-  Future<void> addItem({
-    required String productId,
-    String? variantId,
-    int quantity = 1,
-  }) async {
-    try {
-      await _service.addToCart(
-        productId: productId,
-        variantId: variantId,
-        quantity: quantity,
-      );
-      await fetchCart();
-    } catch (e) {
-      // Re-throw or handle error
-    }
-  }
-
-  Future<void> updateQuantity(String itemId, int quantity) async {
-    try {
-      await _service.updateQuantity(itemId, quantity);
-      await fetchCart();
-    } catch (e) {
-      // Handle error
-    }
-  }
-
-  Future<void> removeItem(String itemId) async {
-    try {
-      await _service.removeItem(itemId);
-      await fetchCart();
-    } catch (e) {
-      // Handle error
-    }
+  void setToken(String? token) {
+    // No-op for local normal cart
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../shared/widgets/app_back_button.dart';
 import '../../shared/widgets/auth_text_field.dart';
 import '../../shared/widgets/decorative_background.dart';
@@ -44,6 +46,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         final authState = ref.read(authProvider);
         if (authState.isAuthenticated) {
+          try {
+            context.read<CartProvider>().fetchCart();
+          } catch (_) {}
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Login successful! Welcome back.'),

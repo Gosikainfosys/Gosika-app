@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../models/product.dart';
+import '../../../widgets/wishlist_heart_button.dart';
+import '../../../widgets/add_to_cart_button.dart';
 
 class ModernProductData {
   final String id;
@@ -13,6 +18,7 @@ class ModernProductData {
   final String discountBadge;
   final double rating;
   final int reviewsCount;
+  final Product? originalProduct;
 
   const ModernProductData({
     required this.id,
@@ -24,27 +30,57 @@ class ModernProductData {
     required this.discountBadge,
     this.rating = 4.5,
     this.reviewsCount = 120,
+    this.originalProduct,
   });
+
+  Product toProduct() {
+    if (originalProduct != null) return originalProduct!;
+
+    double parsePrice(String text) {
+      final cleaned = text.replaceAll(RegExp(r'[^0-9.]'), '');
+      return double.tryParse(cleaned) ?? 0.0;
+    }
+
+    return Product(
+      id: id,
+      name: title,
+      slug: id,
+      shortDescription: subtitle,
+      price: parsePrice(currentPrice),
+      compareAtPrice: oldPrice != null ? parsePrice(oldPrice!) : null,
+      image: imageUrl,
+      images: [imageUrl],
+      variants: [],
+      ratingAvg: rating,
+      ratingCount: reviewsCount,
+      isFeatured: false,
+      status: 'active',
+      stockStatus: 'in_stock',
+    );
+  }
 }
 
-class ModernProductCard extends StatefulWidget {
+class ModernProductCard extends ConsumerStatefulWidget {
   final ModernProductData product;
+  final GlobalKey? cartIconKey;
 
   const ModernProductCard({
     super.key,
     required this.product,
+    this.cartIconKey,
   });
 
   @override
-  State<ModernProductCard> createState() => _ModernProductCardState();
+  ConsumerState<ModernProductCard> createState() => _ModernProductCardState();
 }
 
-class _ModernProductCardState extends State<ModernProductCard> {
-  bool _isWishlisted = false;
+class _ModernProductCardState extends ConsumerState<ModernProductCard> {
+  final GlobalKey _imageKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
     final p = widget.product;
+    final productModel = p.toProduct();
 
     return GestureDetector(
       onTap: () => context.push('/products/${p.id}'),
@@ -65,22 +101,27 @@ class _ModernProductCardState extends State<ModernProductCard> {
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Top Image Region with Discount Badge & Wishlist Heart
+            // Top Image Region with Discount Badge & Wishlist Heart Button
             Stack(
               children: [
-                Container(
-                  height: 120,
-                  width: double.infinity,
-                  color: AppColors.inputBackground,
-                  child: Image.network(
-                    p.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: AppColors.secondaryText,
-                        size: 32,
+                KeyedSubtree(
+                  key: _imageKey,
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    color: AppColors.inputBackground,
+                    child: CachedNetworkImage(
+                      imageUrl: p.imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(color: Colors.grey[100]),
+                      errorWidget: (context, error, stackTrace) => const Center(
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          color: AppColors.secondaryText,
+                          size: 32,
+                        ),
                       ),
                     ),
                   ),
@@ -111,36 +152,11 @@ class _ModernProductCardState extends State<ModernProductCard> {
 
                 // Wishlist Heart Button (Top Right)
                 Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _isWishlisted = !_isWishlisted);
-                    },
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: const BoxDecoration(
-                        color: AppColors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0x14000000),
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        _isWishlisted
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: _isWishlisted
-                            ? AppColors.primaryOrange
-                            : AppColors.secondaryText,
-                        size: 16,
-                      ),
-                    ),
+                  top: 6,
+                  right: 6,
+                  child: WishlistHeartButton(
+                    productId: p.id,
+                    size: 18,
                   ),
                 ),
               ],
@@ -151,6 +167,7 @@ class _ModernProductCardState extends State<ModernProductCard> {
               padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Product Name
                   Text(
@@ -175,7 +192,7 @@ class _ModernProductCardState extends State<ModernProductCard> {
                       color: AppColors.secondaryText,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
 
                   // Rating Row
                   Row(
@@ -204,21 +221,20 @@ class _ModernProductCardState extends State<ModernProductCard> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
-                  // Price Row and Add-to-Cart Button
+                  // Price Row with Inline Compact Add-to-Cart Button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // Current and Old Price
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             p.currentPrice,
                             style: AppTextStyles.button.copyWith(
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: FontWeight.w800,
                               color: AppColors.primaryOrange,
                             ),
@@ -227,38 +243,18 @@ class _ModernProductCardState extends State<ModernProductCard> {
                             Text(
                               p.oldPrice!,
                               style: AppTextStyles.bodySmall.copyWith(
-                                fontSize: 10,
+                                fontSize: 9,
                                 decoration: TextDecoration.lineThrough,
                                 color: AppColors.secondaryText,
                               ),
                             ),
                         ],
                       ),
-
-                      // Small Circular Orange Add-to-Cart Button
-                      GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${p.title} added to cart!'),
-                              backgroundColor: AppColors.successGreen,
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: AppColors.paleOrange,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.add_shopping_cart_rounded,
-                            color: AppColors.primaryOrange,
-                            size: 16,
-                          ),
-                        ),
+                      AddToCartButton(
+                        product: productModel,
+                        productImageKey: _imageKey,
+                        cartIconKey: widget.cartIconKey,
+                        iconOnly: true,
                       ),
                     ],
                   ),

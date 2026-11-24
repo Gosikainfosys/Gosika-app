@@ -19,6 +19,34 @@ final orderTrackingProvider = FutureProvider.family<List<OrderTracking>, String>
   return service.getTracking(id);
 });
 
+class OrderFilter {
+  final String? status;
+  final String? search;
+  final String? dateFrom;
+  final String? dateTo;
+
+  const OrderFilter({
+    this.status,
+    this.search,
+    this.dateFrom,
+    this.dateTo,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is OrderFilter &&
+          runtimeType == other.runtimeType &&
+          status == other.status &&
+          search == other.search &&
+          dateFrom == other.dateFrom &&
+          dateTo == other.dateTo;
+
+  @override
+  int get hashCode =>
+      status.hashCode ^ search.hashCode ^ dateFrom.hashCode ^ dateTo.hashCode;
+}
+
 class OrderListState {
   final List<Order> orders;
   final bool isLoading;
@@ -56,17 +84,22 @@ class OrderListState {
 
 class OrderListNotifier extends StateNotifier<OrderListState> {
   final OrderService _service;
-  final String? status;
-  final String? search;
+  final OrderFilter filter;
 
-  OrderListNotifier(this._service, {this.status, this.search}) : super(OrderListState()) {
+  OrderListNotifier(this._service, this.filter) : super(OrderListState()) {
     fetchOrders();
   }
 
   Future<void> fetchOrders() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final res = await _service.getOrders(page: 1, status: status, search: search);
+      final res = await _service.getOrders(
+        page: 1,
+        status: filter.status,
+        search: filter.search,
+        dateFrom: filter.dateFrom,
+        dateTo: filter.dateTo,
+      );
       state = state.copyWith(
         orders: res.data,
         meta: res.meta,
@@ -86,7 +119,13 @@ class OrderListNotifier extends StateNotifier<OrderListState> {
 
     state = state.copyWith(isFetchingMore: true);
     try {
-      final res = await _service.getOrders(page: nextPage, status: status, search: search);
+      final res = await _service.getOrders(
+        page: nextPage,
+        status: filter.status,
+        search: filter.search,
+        dateFrom: filter.dateFrom,
+        dateTo: filter.dateTo,
+      );
       state = state.copyWith(
         orders: [...state.orders, ...res.data],
         meta: res.meta,
@@ -108,7 +147,7 @@ class OrderListNotifier extends StateNotifier<OrderListState> {
   }
 }
 
-final orderListProvider = StateNotifierProvider.family<OrderListNotifier, OrderListState, String?>((ref, status) {
+final orderListProvider = StateNotifierProvider.autoDispose.family<OrderListNotifier, OrderListState, OrderFilter>((ref, filter) {
   final service = ref.watch(orderServiceProvider);
-  return OrderListNotifier(service, status: status);
+  return OrderListNotifier(service, filter);
 });

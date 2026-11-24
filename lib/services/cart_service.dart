@@ -1,62 +1,83 @@
-import '../core/api_client.dart';
-import '../models/cart.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../models/cart_model.dart';
+
+const String _base = 'https://gosika.sital.info.np/api/v1';
 
 class CartService {
-  final ApiClient _apiClient;
+  final String? token;
+  CartService(this.token);
 
-  CartService(this._apiClient);
+  Map<String, String> get _headers => {
+    'Authorization': 'Bearer ${token ?? ''}',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
 
-  Future<Cart> getCart() async {
-    final response = await _apiClient.dio.get('/cart');
-    final data = response.data['data'] ?? response.data;
-    return Cart.fromJson(data);
+  // GET /cart
+  Future<CartModel> fetchCart() async {
+    final res = await http.get(Uri.parse('$_base/cart'), headers: _headers);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200 && body['success'] == true) {
+      return CartModel.fromJson(body['data'] as Map<String, dynamic>);
+    }
+    throw Exception(body['message'] ?? 'Failed to load cart');
   }
 
-  Future<void> addToCart({
+  // POST /cart/items
+  Future<CartModel> addItem({
     required String productId,
     String? variantId,
     int quantity = 1,
   }) async {
-    try {
-      await _apiClient.dio.post('/cart', data: {
+    final res = await http.post(
+      Uri.parse('$_base/cart/items'),
+      headers: _headers,
+      body: jsonEncode({
         'product_id': productId,
-        'variant_id': variantId,
+        if (variantId != null) 'variant_id': variantId,
         'quantity': quantity,
-      });
-    } catch (_) {
-      await _apiClient.dio.post('/cart/items', data: {
-        'product_id': productId,
-        'variant_id': variantId,
-        'quantity': quantity,
-      });
+      }),
+    );
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200 && body['success'] == true) {
+      // response is { data: { item: uuid, cart: {...} } }
+      final cartData = (body['data'] as Map<String, dynamic>)['cart']
+          as Map<String, dynamic>;
+      return CartModel.fromJson(cartData);
     }
+    throw Exception(body['message'] ?? 'Failed to add item');
   }
 
-  Future<void> updateQuantity(String itemId, int quantity) async {
-    try {
-      await _apiClient.dio.patch('/cart/$itemId', data: {
-        'quantity': quantity,
-      });
-    } catch (_) {
-      await _apiClient.dio.put('/cart/items/$itemId', data: {
-        'quantity': quantity,
-      });
+  // PUT /cart/items/{id}
+  Future<CartModel> updateQuantity(String itemId, int quantity) async {
+    final res = await http.put(
+      Uri.parse('$_base/cart/items/$itemId'),
+      headers: _headers,
+      body: jsonEncode({'quantity': quantity}),
+    );
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200 && body['success'] == true) {
+      return CartModel.fromJson(body['data'] as Map<String, dynamic>);
     }
+    throw Exception(body['message'] ?? 'Failed to update quantity');
   }
 
-  Future<void> removeItem(String itemId) async {
-    try {
-      await _apiClient.dio.delete('/cart/$itemId');
-    } catch (_) {
-      await _apiClient.dio.delete('/cart/items/$itemId');
+  // DELETE /cart/items/{id}
+  Future<CartModel> removeItem(String itemId) async {
+    final res = await http.delete(
+      Uri.parse('$_base/cart/items/$itemId'),
+      headers: _headers,
+    );
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200 && body['success'] == true) {
+      return CartModel.fromJson(body['data'] as Map<String, dynamic>);
     }
+    throw Exception(body['message'] ?? 'Failed to remove item');
   }
 
+  // DELETE /cart
   Future<void> clearCart() async {
-    try {
-      await _apiClient.dio.delete('/cart/clear');
-    } catch (_) {
-      await _apiClient.dio.delete('/cart');
-    }
+    await http.delete(Uri.parse('$_base/cart'), headers: _headers);
   }
 }

@@ -7,6 +7,7 @@ import 'constants.dart';
 class ApiClient {
   late final Dio dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static const String _sessionKey = 'gosika_guest_session_id';
   static String? _sessionId;
 
   ApiClient() {
@@ -108,20 +109,44 @@ class ApiClient {
       normalized = path.replaceFirst('storage/', '');
     }
 
-    // Prefix with host and storage path
-    final origin = kBaseUrl.replaceFirst('/api/v1', '');
-    return '$origin/storage/$normalized';
+    // Prefix with host
+    return 'https://gosika.sital.info.np/storage/$normalized';
   }
 
+  /// Returns persistent guest session ID from FlutterSecureStorage / SharedPreferences
   static Future<String> getSessionId() async {
-    if (_sessionId != null) return _sessionId!;
-    final prefs = await SharedPreferences.getInstance();
-    _sessionId = prefs.getString('x_session_id');
-    if (_sessionId == null) {
+    if (_sessionId != null && _sessionId!.isNotEmpty) return _sessionId!;
+
+    const storage = FlutterSecureStorage();
+    try {
+      _sessionId = await storage.read(key: _sessionKey);
+    } catch (_) {}
+
+    if (_sessionId == null || _sessionId!.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      _sessionId = prefs.getString(_sessionKey);
+    }
+
+    if (_sessionId == null || _sessionId!.isEmpty) {
       _sessionId = const Uuid().v4();
-      await prefs.setString('x_session_id', _sessionId!);
+      try {
+        await storage.write(key: _sessionKey, value: _sessionId);
+      } catch (_) {}
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_sessionKey, _sessionId!);
     }
     return _sessionId!;
+  }
+
+  /// Clears session ID on logout if needed
+  static Future<void> clearSessionId() async {
+    _sessionId = null;
+    const storage = FlutterSecureStorage();
+    try {
+      await storage.delete(key: _sessionKey);
+    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_sessionKey);
   }
 }
 
@@ -136,7 +161,7 @@ class AuthInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) async {
     final token = await storage.read(key: kTokenKey);
-    if (token != null) {
+    if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
@@ -159,7 +184,7 @@ class ErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (err.response?.statusCode == 401) {
-      // Automatic session clearing handled here or in provider
+      // Automatic session handling
     }
     handler.next(err);
   }

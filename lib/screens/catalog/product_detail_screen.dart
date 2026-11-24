@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants.dart';
 import '../../providers/catalog_provider.dart';
-import '../../providers/cart_provider.dart';
-import '../../providers/wishlist_provider.dart';
 import '../../models/product.dart';
+import '../../widgets/wishlist_heart_button.dart';
+import '../../widgets/add_to_cart_button.dart';
+import '../../widgets/cart_icon_badge.dart';
+import '../../widgets/cart_bottom_sheet.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -16,18 +18,14 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
-  int _quantity = 1;
   int _currentImageIndex = 0;
   ProductVariant? _selectedVariant;
+  final GlobalKey _imageKey = GlobalKey();
+  final GlobalKey _cartIconKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
     final productAsync = ref.watch(productDetailProvider(widget.productId));
-
-    final isWishlisted = ref.watch(wishlistProvider).maybeWhen(
-          data: (items) => items.any((item) => item.id == widget.productId),
-          orElse: () => false,
-        );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -39,14 +37,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             icon: const Icon(Icons.share_outlined, color: kNavy),
             onPressed: () {},
           ),
-          IconButton(
-            icon: Icon(
-              isWishlisted ? Icons.favorite : Icons.favorite_border,
-              color: isWishlisted ? const Color(0xFFFF5722) : kNavy,
+          WishlistHeartButton(
+            productId: widget.productId,
+            showBackground: false,
+            size: 22,
+          ),
+          const SizedBox(width: 4),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: CartIconBadge(
+              iconKey: _cartIconKey,
+              onTap: () => CartBottomSheet.show(context),
             ),
-            onPressed: () {
-              ref.read(wishlistProvider.notifier).toggleWishlist(widget.productId);
-            },
           ),
         ],
       ),
@@ -74,7 +76,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         itemCount: imageList.length,
                         onPageChanged: (index) => setState(() => _currentImageIndex = index),
                         itemBuilder: (context, index) {
-                          return CachedNetworkImage(
+                          final imgWidget = CachedNetworkImage(
                             imageUrl: imageList[index],
                             fit: BoxFit.cover,
                             httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
@@ -84,6 +86,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               child: const Icon(Icons.broken_image, size: 48, color: Colors.grey),
                             ),
                           );
+
+                          if (index == 0) {
+                            return KeyedSubtree(
+                              key: _imageKey,
+                              child: imgWidget,
+                            );
+                          }
+                          return imgWidget;
                         },
                       ),
                     ),
@@ -110,6 +120,35 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Stock warning badges if low_stock or out_of_stock
+                      if (product.stockStatus == 'low_stock')
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Low Stock',
+                            style: TextStyle(color: Colors.orange.shade900, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+
+                      if (product.stockStatus == 'out_of_stock')
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Out of Stock',
+                            style: TextStyle(color: Colors.red.shade900, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+
                       // Discount Badge
                       if (discount > 0)
                         Container(
@@ -262,76 +301,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ],
           ),
           child: SafeArea(
-            child: Row(
-              children: [
-                // Quantity Selector
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (_quantity > 1) setState(() => _quantity--);
-                        },
-                        icon: const Icon(Icons.remove, size: 18),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      Text('$_quantity', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      IconButton(
-                        onPressed: () => setState(() => _quantity++),
-                        icon: const Icon(Icons.add, size: 18),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-
-                // Add to Cart Button
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      try {
-                        await ref.read(cartProvider.notifier).addItem(
-                              productId: product.id,
-                              variantId: _selectedVariant?.id,
-                              quantity: _quantity,
-                            );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Item added to cart!'),
-                              backgroundColor: Color(0xFFFF5722),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-                    label: const Text(
-                      'Add to Cart',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF5722),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            child: AddToCartButton(
+              product: product,
+              selectedVariant: _selectedVariant,
+              productImageKey: _imageKey,
+              cartIconKey: _cartIconKey,
+              fullWidth: true,
+              compact: false,
+              showQuantityStepperWhenInCart: true,
             ),
           ),
         ),
