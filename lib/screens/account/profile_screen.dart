@@ -167,14 +167,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   CustomTextField(
                     controller: currentPasswordCtrl,
                     label: 'Current Password',
-                    isPassword: true,
+                    obscureText: true,
                     validator: (v) => (v == null || v.isEmpty) ? 'Current password is required' : null,
                   ),
                   const SizedBox(height: 12),
                   CustomTextField(
                     controller: newPasswordCtrl,
                     label: 'New Password (min 8 chars)',
-                    isPassword: true,
+                    obscureText: true,
                     validator: (v) {
                       if (v == null || v.length < 8) return 'Password must be at least 8 characters';
                       return null;
@@ -184,7 +184,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   CustomTextField(
                     controller: confirmPasswordCtrl,
                     label: 'Confirm New Password',
-                    isPassword: true,
+                    obscureText: true,
                     validator: (v) {
                       if (v != newPasswordCtrl.text) return 'Passwords do not match';
                       return null;

@@ -211,7 +211,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                               const Text('Delivery OTP: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: kNavy)),
                               Text(
                                 order.deliveryOtp!,
-                                style: const TextStyle(fontWeight: FontWeight.extrabold, fontSize: 16, color: Colors.blue, letterSpacing: 2),
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Colors.blue, letterSpacing: 2),
                               ),
                             ],
                           ),

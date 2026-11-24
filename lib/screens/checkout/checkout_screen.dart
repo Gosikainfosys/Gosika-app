@@ -337,9 +337,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(addr.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: kNavy)),
+                Text(addr.label ?? addr.addressType, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: kNavy)),
                 const SizedBox(height: 2),
-                Text(addr.fullName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                if (addr.fullName != null && addr.fullName!.isNotEmpty)
+                  Text(addr.fullName!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                 Text(addr.addressLine1, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 Text(addr.phone, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
               ],
