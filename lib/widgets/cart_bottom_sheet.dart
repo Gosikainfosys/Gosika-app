@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../core/theme/app_colors.dart';
 import '../models/cart_item.dart';
@@ -10,23 +11,17 @@ import '../providers/cart_provider.dart';
 class CartBottomSheet extends StatelessWidget {
   const CartBottomSheet({super.key});
 
-  static Future<void> show(BuildContext context) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const CartBottomSheet(),
-    );
+  static Future<void> show(BuildContext context) async {
+    context.push('/cart');
   }
 
   @override
   Widget build(BuildContext context) {
     final cartState = context.watch<CartProvider>();
+    final sheetHeight = MediaQuery.of(context).size.height * 0.75;
 
     return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
+      height: sheetHeight,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -39,8 +34,8 @@ class CartBottomSheet extends StatelessWidget {
         ],
       ),
       child: SafeArea(
+        top: false,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             // Top drag indicator & title header
             Container(
@@ -107,30 +102,22 @@ class CartBottomSheet extends StatelessWidget {
             const Divider(height: 1),
 
             // Items List or Empty State
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.5,
-              ),
+            Expanded(
               child: cartState.isLoading && cartState.items.isEmpty
-                  ? const SizedBox(
-                      height: 200,
-                      child: Center(child: CircularProgressIndicator(color: AppColors.primaryOrange)),
-                    )
-                  : cartState.items.isEmpty
-                      ? SizedBox(
-                          height: 250,
-                          child: _buildEmptyState(context),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          itemCount: cartState.items.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final item = cartState.items[index];
-                            return _buildCartItemTile(context, item);
-                          },
-                        ),
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primaryOrange))
+                  : cartState.error != null && cartState.items.isEmpty
+                      ? _buildErrorState(context, cartState)
+                      : cartState.items.isEmpty
+                          ? _buildEmptyState(context)
+                          : ListView.separated(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              itemCount: cartState.items.length,
+                              separatorBuilder: (context, index) => const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final item = cartState.items[index];
+                                return _buildCartItemTile(context, item);
+                              },
+                            ),
             ),
 
             // Bottom Total & Checkout Section
@@ -166,6 +153,40 @@ class CartBottomSheet extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
             child: const Text('Browse Products'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, CartProvider cartState) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 60, color: Colors.red.shade300),
+          const SizedBox(height: 16),
+          const Text(
+            'Error Loading Cart',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kNavy),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              cartState.error ?? 'Unknown error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: kMuted, fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => cartState.fetchCart(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryOrange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Retry'),
           ),
         ],
       ),
@@ -219,7 +240,7 @@ class CartBottomSheet extends StatelessWidget {
                 height: 60,
                 child: item.image != null && item.image!.isNotEmpty
                     ? CachedNetworkImage(
-                        imageUrl: item.image!,
+                        imageUrl: ApiClient.apiImage(item.image),
                         fit: BoxFit.cover,
                         placeholder: (ctx, url) => Container(color: Colors.grey[100]),
                         errorWidget: (ctx, url, err) => Container(
@@ -339,24 +360,21 @@ class CartBottomSheet extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            SizedBox(
-              height: 46,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  context.push('/checkout');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryOrange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Proceed to Checkout →',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.push('/checkout');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryOrange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Proceed to Checkout →',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ],

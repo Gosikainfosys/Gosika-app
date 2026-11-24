@@ -98,15 +98,23 @@ class ApiClient {
 
   /// Helper to handle relative/absolute API images as per GOSIKA blueprint
   static String apiImage(String? path) {
-    if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http') || path.startsWith('data:')) return path;
+    if (path == null || path.trim().isEmpty) return '';
+    final trimmed = path.trim();
+    if (trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://') ||
+        trimmed.startsWith('data:')) {
+      return trimmed;
+    }
 
     // Normalize relative path
-    String normalized = path;
-    if (path.startsWith('/storage/')) {
-      normalized = path.replaceFirst('/storage/', '');
-    } else if (path.startsWith('storage/')) {
-      normalized = path.replaceFirst('storage/', '');
+    String normalized = trimmed;
+    if (normalized.startsWith('/storage/')) {
+      normalized = normalized.replaceFirst('/storage/', '');
+    } else if (normalized.startsWith('storage/')) {
+      normalized = normalized.replaceFirst('storage/', '');
+    }
+    if (normalized.startsWith('/')) {
+      normalized = normalized.substring(1);
     }
 
     // Prefix with host

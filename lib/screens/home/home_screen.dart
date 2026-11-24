@@ -219,11 +219,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 cartIconKey: _cartIconKey,
                 onSearchTap: () => context.push('/search'),
                 onProfileTap: () => context.push('/account'),
-                onCartTap: () {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    CartBottomSheet.show(context);
-                  });
-                },
+                onCartTap: () => CartBottomSheet.show(context),
               ),
             ),
 

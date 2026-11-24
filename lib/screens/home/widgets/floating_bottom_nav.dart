@@ -111,11 +111,7 @@ class FloatingBottomNav extends StatelessWidget {
     final isSelected = selectedIndex == index;
 
     return GestureDetector(
-      onTap: () {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          CartBottomSheet.show(context);
-        });
-      },
+      onTap: () => onItemTapped(index),
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -124,11 +120,6 @@ class FloatingBottomNav extends StatelessWidget {
             iconKey: cartIconKey,
             iconColor: isSelected ? AppColors.primaryOrange : AppColors.secondaryText,
             size: 22,
-            onTap: () {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                CartBottomSheet.show(context);
-              });
-            },
           ),
           const SizedBox(height: 3),
           Text(

@@ -92,6 +92,7 @@ class AddToCartButton extends StatelessWidget {
             context.read<CartProvider>().addItem(
                   product,
                   quantity: selectedQty,
+                  variantId: selectedV?.id,
                   variantName: selectedV?.name,
                 );
             if (context.mounted) {
@@ -112,6 +113,7 @@ class AddToCartButton extends StatelessWidget {
     context.read<CartProvider>().addItem(
           product,
           quantity: 1,
+          variantId: selectedVariant?.id,
           variantName: selectedVariant?.name,
         );
     if (context.mounted) {
