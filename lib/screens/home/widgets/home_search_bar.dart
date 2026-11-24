@@ -4,14 +4,16 @@ import '../../../core/theme/app_text_styles.dart';
 
 class HomeSearchBar extends StatelessWidget {
   final ValueChanged<String>? onChanged;
-  final VoidCallback? onScanTap;
+  final VoidCallback? onFilterTap;
   final VoidCallback? onTap;
+  final String hintText;
 
   const HomeSearchBar({
     super.key,
     this.onChanged,
-    this.onScanTap,
+    this.onFilterTap,
     this.onTap,
+    this.hintText = 'Would you like to buy something?',
   });
 
   @override
@@ -24,13 +26,13 @@ class HomeSearchBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(25),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x18000000),
+            color: Color(0x12000000),
             blurRadius: 16,
             offset: Offset(0, 4),
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.only(left: 16, right: 6),
       child: Row(
         children: [
           const Icon(
@@ -48,7 +50,7 @@ class HomeSearchBar extends StatelessWidget {
                 fontSize: 13.5,
               ),
               decoration: InputDecoration(
-                hintText: 'Search for products, brands and more...',
+                hintText: hintText,
                 hintStyle: AppTextStyles.inputHint.copyWith(
                   fontSize: 13,
                   color: AppColors.secondaryText,
@@ -61,18 +63,22 @@ class HomeSearchBar extends StatelessWidget {
               ),
             ),
           ),
-          Container(
-            height: 20,
-            width: 1,
-            color: AppColors.border,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-          ),
+
+          // Green/Orange Styled Filter Sliders Button
           GestureDetector(
-            onTap: onScanTap,
-            child: const Icon(
-              Icons.qr_code_scanner_rounded,
-              color: AppColors.primaryOrange,
-              size: 22,
+            onTap: onFilterTap ?? onTap,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CAF50).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(19),
+              ),
+              child: const Icon(
+                Icons.tune_rounded,
+                color: Color(0xFF4CAF50),
+                size: 20,
+              ),
             ),
           ),
         ],

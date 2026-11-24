@@ -69,7 +69,7 @@ class _PromoBannerState extends State<PromoBanner> {
       return Column(
         children: [
           SizedBox(
-            height: 180,
+            height: 170,
             child: PageView.builder(
               controller: _pageController,
               onPageChanged: (index) {
@@ -84,21 +84,18 @@ class _PromoBannerState extends State<PromoBanner> {
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(22),
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [
-                        Color(0xFFFFF0E8),
-                        Color(0xFFFFE3D6),
+                        const Color(0xFFF3F4F6),
+                        const Color(0xFFE5E7EB).withValues(alpha: 0.8),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    border: Border.all(
-                      color: AppColors.primaryOrange.withValues(alpha: 0.15),
-                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x10000000),
-                        blurRadius: 14,
+                        blurRadius: 12,
                         offset: Offset(0, 4),
                       ),
                     ],
@@ -107,115 +104,72 @@ class _PromoBannerState extends State<PromoBanner> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Background shape
-                      Positioned(
-                        right: -20,
-                        bottom: -20,
-                        child: Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.primaryOrange.withValues(alpha: 0.1),
-                          ),
-                        ),
-                      ),
-
-                      // Main Banner Content
                       Padding(
                         padding: const EdgeInsets.all(18),
                         child: Row(
                           children: [
-                            // Left Text Column
+                            // Left Text Column matching design template
                             Expanded(
                               flex: 6,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  // Type/Badge
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryOrange,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      c.type.toUpperCase().replaceAll('_', ' '),
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        color: AppColors.white,
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-
-                                  // Title
                                   Text(
                                     c.title,
-                                    maxLines: 2,
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.heading1.copyWith(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.primaryOrange,
-                                      height: 1.15,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.darkText,
                                     ),
                                   ),
-                                  const SizedBox(height: 3),
+                                  const SizedBox(height: 4),
 
-                                  // Tagline
                                   Text(
-                                    c.tagline.isNotEmpty
-                                        ? c.tagline
-                                        : c.discountText,
+                                    c.discountText.isNotEmpty ? c.discountText : '20% OFF',
+                                    style: AppTextStyles.heading1.copyWith(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.darkText,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+
+                                  Text(
+                                    c.tagline.isNotEmpty ? c.tagline : 'Special Offer Today',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTextStyles.bodySmall.copyWith(
                                       fontSize: 11,
-                                      color:
-                                          AppColors.darkText.withValues(alpha: 0.8),
-                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.secondaryText,
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 12),
 
-                                  // Button: Shop Now
                                   GestureDetector(
                                     onTap: () => context.push('/shop'),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 7),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       decoration: BoxDecoration(
                                         color: AppColors.primaryOrange,
                                         borderRadius: BorderRadius.circular(20),
                                         boxShadow: const [
                                           BoxShadow(
-                                            color: Color(0x28FF5500),
+                                            color: Color(0x30FF5722),
                                             blurRadius: 8,
                                             offset: Offset(0, 3),
                                           ),
                                         ],
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'Shop Now',
-                                            style: AppTextStyles.button.copyWith(
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          const Icon(
-                                            Icons.arrow_forward_rounded,
-                                            size: 13,
-                                            color: AppColors.white,
-                                          ),
-                                        ],
+                                      child: Text(
+                                        'Get Now',
+                                        style: AppTextStyles.button.copyWith(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -226,16 +180,16 @@ class _PromoBannerState extends State<PromoBanner> {
                             // Right Image
                             if (imageUrl.isNotEmpty)
                               Expanded(
-                                flex: 4,
+                                flex: 5,
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(16),
                                   child: Image.network(
                                     imageUrl,
-                                    fit: BoxFit.contain,
+                                    fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) =>
                                         const Icon(
                                       Icons.shopping_bag_rounded,
-                                      size: 80,
+                                      size: 70,
                                       color: AppColors.primaryOrange,
                                     ),
                                   ),
@@ -250,7 +204,7 @@ class _PromoBannerState extends State<PromoBanner> {
               },
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
           // Indicators
           if (list.length > 1)
@@ -260,7 +214,7 @@ class _PromoBannerState extends State<PromoBanner> {
                 list.length,
                 (index) => Container(
                   margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: index == _activePage ? 18 : 6,
+                  width: index == _activePage ? 16 : 6,
                   height: 6,
                   decoration: BoxDecoration(
                     color: index == _activePage
@@ -275,168 +229,128 @@ class _PromoBannerState extends State<PromoBanner> {
       );
     }
 
-    // Default Fallback Banner
+    // Default Fallback Banner template matching design mockup
     return Column(
       children: [
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
-          height: 180,
+          height: 170,
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [
-                Color(0xFFFFF0E8),
-                Color(0xFFFFE3D6),
+                const Color(0xFFF3F4F6),
+                const Color(0xFFE5E7EB).withValues(alpha: 0.8),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(
-              color: AppColors.primaryOrange.withValues(alpha: 0.15),
-            ),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x10000000),
-                blurRadius: 14,
+                blurRadius: 12,
                 offset: Offset(0, 4),
               ),
             ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: Stack(
-            children: [
-              Positioned(
-                right: -20,
-                bottom: -20,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primaryOrange.withValues(alpha: 0.1),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 6,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryOrange,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              'Special Offer',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Up to 50% OFF',
-                            style: AppTextStyles.heading1.copyWith(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primaryOrange,
-                              height: 1.15,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'On Fashion, Electronics, Home & More',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              fontSize: 11,
-                              color: AppColors.darkText.withValues(alpha: 0.8),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          GestureDetector(
-                            onTap: () => context.push('/shop'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryOrange,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x28FF5500),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Shop Now',
-                                    style: AppTextStyles.button.copyWith(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Icon(
-                                    Icons.arrow_forward_rounded,
-                                    size: 14,
-                                    color: AppColors.white,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Vegetable Offers',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.darkText,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      flex: 4,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                            Icons.shopping_bag_rounded,
-                            size: 80,
-                            color: AppColors.primaryOrange,
+                      const SizedBox(height: 4),
+                      Text(
+                        '20% OFF',
+                        style: AppTextStyles.heading1.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.darkText,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '10 October, 2025',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => context.push('/shop'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x304CAF50),
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            'Get Now',
+                            style: AppTextStyles.button.copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Expanded(
+                  flex: 5,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(
+                        Icons.shopping_bag_rounded,
+                        size: 70,
+                        color: AppColors.primaryOrange,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
-            3,
+            4,
             (index) => Container(
               margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: index == _activePage ? 18 : 6,
+              width: index == 0 ? 16 : 6,
               height: 6,
               decoration: BoxDecoration(
-                color: index == _activePage
-                    ? AppColors.primaryOrange
+                color: index == 0
+                    ? const Color(0xFF4CAF50)
                     : AppColors.border,
                 borderRadius: BorderRadius.circular(3),
               ),

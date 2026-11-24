@@ -12,6 +12,8 @@ import '../../providers/catalog_provider.dart';
 import '../../widgets/cart_icon_badge.dart';
 import '../../widgets/cart_bottom_sheet.dart';
 import 'widgets/category_carousel.dart';
+import 'widgets/home_header.dart';
+import 'widgets/home_search_bar.dart';
 import 'widgets/modern_product_card.dart';
 import 'widgets/promo_banner.dart';
 import 'widgets/section_header.dart';
@@ -229,7 +231,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 padding: const EdgeInsets.only(bottom: 110),
                 child: Column(
                   children: [
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
+
+                    // Top User Header matching design template
+                    HomeHeader(
+                      userName: 'Muhammad Farhan',
+                      locationText: 'Kathmandu, Nepal',
+                      cartIconKey: _cartIconKey,
+                      onNotificationTap: () => context.push('/notifications'),
+                      onCartTap: () => CartBottomSheet.show(context),
+                      onLocationTap: () => context.push('/location'),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Search Bar with Green/Orange Filter Sliders Button
+                    HomeSearchBar(
+                      hintText: 'Would you like to buy something?',
+                      onTap: () => context.push('/search'),
+                      onFilterTap: () => context.push('/search'),
+                    ),
+
+                    const SizedBox(height: 16),
 
                     // PROMOTIONAL BANNER SECTION
                     campaignsAsync.when(
