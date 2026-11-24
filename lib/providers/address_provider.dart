@@ -10,17 +10,29 @@ final addressServiceProvider = Provider((ref) {
 
 final addressListProvider = StateNotifierProvider<AddressListNotifier, AsyncValue<List<CustomerAddress>>>((ref) {
   final service = ref.watch(addressServiceProvider);
-  return AddressListNotifier(service);
+  return AddressListNotifier(service, ref);
 });
 
 class AddressListNotifier extends StateNotifier<AsyncValue<List<CustomerAddress>>> {
   final AddressService _service;
+  final Ref _ref;
 
-  AddressListNotifier(this._service) : super(const AsyncValue.loading()) {
+  AddressListNotifier(this._service, this._ref) : super(const AsyncValue.loading()) {
     fetchAddresses();
+
+    _ref.listen<AuthState>(authProvider, (previous, next) {
+      if (previous?.isAuthenticated != next.isAuthenticated && next.isAuthenticated) {
+        fetchAddresses();
+      }
+    });
   }
 
   Future<void> fetchAddresses() async {
+    final isAuthenticated = _ref.read(authProvider).isAuthenticated;
+    if (!isAuthenticated) {
+      state = const AsyncValue.data([]);
+      return;
+    }
     state = const AsyncValue.loading();
     try {
       final addresses = await _service.getAddresses();
@@ -35,7 +47,16 @@ class AddressListNotifier extends StateNotifier<AsyncValue<List<CustomerAddress>
       await _service.createAddress(data);
       await fetchAddresses();
     } catch (e) {
-      // Re-throw or handle
+      rethrow;
+    }
+  }
+
+  Future<void> updateAddress(String id, Map<String, dynamic> data) async {
+    try {
+      await _service.updateAddress(id, data);
+      await fetchAddresses();
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -44,7 +65,16 @@ class AddressListNotifier extends StateNotifier<AsyncValue<List<CustomerAddress>
       await _service.deleteAddress(id);
       await fetchAddresses();
     } catch (e) {
-      // Handle
+      rethrow;
+    }
+  }
+
+  Future<void> setDefaultAddress(String id) async {
+    try {
+      await _service.setDefaultAddress(id);
+      await fetchAddresses();
+    } catch (e) {
+      rethrow;
     }
   }
 }

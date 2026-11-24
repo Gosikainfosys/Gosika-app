@@ -27,12 +27,12 @@ class NotificationListNotifier extends StateNotifier<AsyncValue<NotificationResp
   }
 
   Future<void> loadNotifications() async {
+    final isAuthenticated = _ref.read(authProvider).isAuthenticated;
+    if (!isAuthenticated) {
+      state = AsyncValue.data(NotificationResponse(notifications: [], unreadCount: 0));
+      return;
+    }
     try {
-      final isAuthenticated = _ref.read(authProvider).isAuthenticated;
-      if (!isAuthenticated) {
-        state = AsyncValue.data(NotificationResponse(notifications: [], unreadCount: 0));
-        return;
-      }
       state = const AsyncValue.loading();
       final res = await _service.getNotifications();
       state = AsyncValue.data(res);
@@ -57,7 +57,7 @@ class NotificationListNotifier extends StateNotifier<AsyncValue<NotificationResp
       final res = await _service.getNotifications();
       state = AsyncValue.data(res);
     } catch (e) {
-      // Keep existing state on refresh error
+      // Keep existing state
     }
   }
 
@@ -87,5 +87,42 @@ class NotificationListNotifier extends StateNotifier<AsyncValue<NotificationResp
     ));
 
     await _service.markAsRead(id);
+  }
+
+  Future<void> markAllAsRead() async {
+    final current = state.value;
+    if (current == null) return;
+
+    final updatedList = current.notifications.map((n) {
+      return NotificationItem(
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        link: n.link,
+        readAt: DateTime.now(),
+        createdAt: n.createdAt,
+      );
+    }).toList();
+
+    state = AsyncValue.data(NotificationResponse(
+      notifications: updatedList,
+      unreadCount: 0,
+    ));
+
+    await _service.markAllAsRead();
+  }
+
+  Future<void> deleteAllRead() async {
+    final current = state.value;
+    if (current == null) return;
+
+    final unreadOnly = current.notifications.where((n) => !n.isRead).toList();
+    state = AsyncValue.data(NotificationResponse(
+      notifications: unreadOnly,
+      unreadCount: unreadOnly.length,
+    ));
+
+    await _service.deleteAllRead();
   }
 }

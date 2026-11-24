@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/constants.dart';
-import '../../providers/order_provider.dart';
+import '../../core/theme/app_colors.dart';
 import '../../models/order.dart';
+import '../../providers/order_provider.dart';
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -14,8 +16,8 @@ class OrderListScreen extends ConsumerStatefulWidget {
 
 class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   int _selectedTabIndex = 0;
-  final List<String?> _statuses = [null, 'processing', 'shipped', 'delivered'];
-  final List<String> _tabLabels = ['All', 'Processing', 'Shipped', 'Delivered'];
+  final List<String?> _statuses = [null, 'pending', 'processing', 'out_for_delivery', 'delivered', 'cancelled'];
+  final List<String> _tabLabels = ['All', 'Pending', 'Processing', 'Out for Delivery', 'Delivered', 'Cancelled'];
 
   @override
   Widget build(BuildContext context) {
@@ -54,12 +56,10 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                         _selectedTabIndex = index;
                       });
                     },
-                    selectedColor: const Color(0xFFFF5722),
+                    selectedColor: AppColors.primaryOrange,
                     backgroundColor: Colors.grey[100],
                     side: BorderSide.none,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     showCheckmark: false,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   ),
@@ -79,39 +79,85 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   }
 }
 
-class _OrderListContent extends ConsumerWidget {
+class _OrderListContent extends ConsumerStatefulWidget {
   final String? status;
   const _OrderListContent({this.status});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(orderListProvider(status));
+  ConsumerState<_OrderListContent> createState() => _OrderListContentState();
+}
+
+class _OrderListContentState extends ConsumerState<_OrderListContent> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      ref.read(orderListProvider(widget.status).notifier).fetchNextPage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(orderListProvider(widget.status));
 
     if (state.isLoading && state.orders.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Color(0xFFFF5722))),
+        child: CircularProgressIndicator(color: AppColors.primaryOrange),
       );
     }
 
     if (state.orders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: () => ref.read(orderListProvider(widget.status).notifier).fetchOrders(),
+        child: ListView(
           children: [
-            Icon(Icons.assignment_outlined, size: 70, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            const Text('No orders found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kNavy)),
-            const SizedBox(height: 4),
-            const Text('When you place orders, they will appear here.', style: TextStyle(color: kMuted, fontSize: 13)),
+            const SizedBox(height: 100),
+            Center(
+              child: Column(
+                children: [
+                  Icon(Icons.assignment_outlined, size: 70, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  const Text('No orders found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kNavy)),
+                  const SizedBox(height: 4),
+                  const Text('When you place orders, they will appear here.', style: TextStyle(color: kMuted, fontSize: 13)),
+                ],
+              ),
+            ),
           ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: state.orders.length,
-      itemBuilder: (context, index) => _OrderCard(order: state.orders[index]),
+    return RefreshIndicator(
+      onRefresh: () => ref.read(orderListProvider(widget.status).notifier).fetchOrders(),
+      child: ListView.separated(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        itemCount: state.orders.length + (state.isFetchingMore ? 1 : 0),
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          if (index == state.orders.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator(color: AppColors.primaryOrange)),
+            );
+          }
+          final order = state.orders[index];
+          return _OrderCard(order: order);
+        },
+      ),
     );
   }
 }
@@ -122,15 +168,17 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = _getStatusColor(order.status);
+    final totalItems = order.items.fold<int>(0, (sum, item) => sum + item.quantity);
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -145,15 +193,25 @@ class _OrderCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '#${order.orderNumber}',
+                'Order #${order.orderNumber}',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: kNavy),
               ),
-              _StatusBadge(status: order.status),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  order.status.toUpperCase(),
+                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            '${_formatDate(order.placedAt)} • ${order.vendorOrders.length} item(s)',
+            '${_formatDate(order.placedAt)} • $totalItems item(s) • ${order.paymentMethod.toUpperCase()}',
             style: TextStyle(color: Colors.grey[600], fontSize: 11),
           ),
           const Padding(
@@ -165,14 +223,9 @@ class _OrderCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    formatNPR(order.grandTotal),
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: kNavy, fontSize: 15),
-                  ),
-                ],
+              Text(
+                formatNPR(order.grandTotal),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryOrange, fontSize: 15),
               ),
               InkWell(
                 onTap: () => context.push('/orders/${order.id}'),
@@ -180,10 +233,10 @@ class _OrderCard extends StatelessWidget {
                   children: [
                     Text(
                       'View Details',
-                      style: TextStyle(color: Color(0xFFFF5722), fontWeight: FontWeight.bold, fontSize: 12),
+                      style: TextStyle(color: AppColors.primaryOrange, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     SizedBox(width: 2),
-                    Icon(Icons.arrow_forward, size: 14, color: Color(0xFFFF5722)),
+                    Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primaryOrange),
                   ],
                 ),
               ),
@@ -194,54 +247,30 @@ class _OrderCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final String status;
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    Color bg = Colors.grey[100]!;
-    Color fg = Colors.grey[800]!;
-
+  Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'processing':
+      case 'preparing':
       case 'pending':
-        bg = const Color(0xFFFFF3E0);
-        fg = const Color(0xFFE65100);
-        break;
-      case 'shipped':
+        return Colors.orange;
       case 'confirmed':
-        bg = const Color(0xFFE3F2FD);
-        fg = const Color(0xFF1565C0);
-        break;
+      case 'ready_for_pickup':
+      case 'picked_up':
+      case 'out_for_delivery':
+        return Colors.blue;
       case 'delivered':
       case 'completed':
-        bg = const Color(0xFFE8F5E9);
-        fg = const Color(0xFF2E7D32);
-        break;
+        return Colors.green;
       case 'cancelled':
-      case 'failed':
-        bg = const Color(0xFFFFEBEE);
-        fg = const Color(0xFFC62828);
-        break;
+        return Colors.red;
+      default:
+        return kNavy;
     }
+  }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(color: fg, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.3),
-      ),
-    );
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'N/A';
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

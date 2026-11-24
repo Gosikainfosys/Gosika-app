@@ -24,20 +24,22 @@ class ChatService {
     try {
       final response = await _apiClient.dio.get('/customer/conversations/$id');
       final data = response.data['data'] ?? response.data;
-      return Conversation.fromJson(data);
+      return Conversation.fromJson(data as Map<String, dynamic>);
     } catch (e) {
       throw ApiClient.parseError(e);
     }
   }
 
-  /// POST /customer/conversations (idempotent support chat creation)
-  Future<Conversation> getOrCreateSupportConversation() async {
+  /// POST /customer/conversations (idempotent support or store chat creation)
+  Future<Conversation> getOrCreateConversation({String type = 'support', String? storeId}) async {
     try {
       final response = await _apiClient.dio.post('/customer/conversations', data: {
-        'type': 'support',
+        'type': type,
+        if (type == 'support') 'subject': 'GOSIKA Support',
+        if (storeId != null && storeId.isNotEmpty) 'store_id': storeId,
       });
       final data = response.data['data'] ?? response.data;
-      return Conversation.fromJson(data);
+      return Conversation.fromJson(data as Map<String, dynamic>);
     } catch (e) {
       throw ApiClient.parseError(e);
     }
@@ -54,7 +56,9 @@ class ChatService {
       dynamic postData;
       if (imageFiles != null && imageFiles.isNotEmpty) {
         final formData = FormData();
-        formData.fields.add(MapEntry('message', message));
+        if (message.isNotEmpty) {
+          formData.fields.add(MapEntry('message', message));
+        }
         formData.fields.add(MapEntry('client_uuid', clientUuid));
         for (var file in imageFiles) {
           final filename = file.path.split('/').last;
@@ -76,10 +80,19 @@ class ChatService {
         data: postData,
       );
 
-      final data = response.data['data'] ?? response.data;
-      return ChatMessage.fromJson(data);
+      final data = response.data['data']?['message'] ?? response.data['data'] ?? response.data;
+      return ChatMessage.fromJson(data as Map<String, dynamic>);
     } catch (e) {
       throw ApiClient.parseError(e);
+    }
+  }
+
+  /// POST /customer/conversations/{id}/read
+  Future<void> markAsRead(String conversationId) async {
+    try {
+      await _apiClient.dio.post('/customer/conversations/$conversationId/read');
+    } catch (e) {
+      // Non-blocking
     }
   }
 }

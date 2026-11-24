@@ -17,9 +17,11 @@ import '../screens/checkout/address_form_screen.dart';
 import '../screens/checkout/order_success_screen.dart';
 import '../screens/orders/order_list_screen.dart';
 import '../screens/orders/order_detail_screen.dart';
+import '../screens/orders/returns_screen.dart';
 import '../screens/account/account_screen.dart';
 import '../screens/account/profile_screen.dart';
 import '../screens/account/address_list_screen.dart';
+import '../screens/account/my_reviews_screen.dart';
 import '../screens/account/wishlist_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
@@ -230,6 +232,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/account/addresses',
         builder: (context, state) => const AddressListScreen(),
+      ),
+      GoRoute(
+        path: '/account/reviews',
+        builder: (context, state) => const MyReviewsScreen(),
+      ),
+      GoRoute(
+        path: '/account/returns',
+        builder: (context, state) => const ReturnsScreen(),
       ),
       GoRoute(
         path: '/wishlist',

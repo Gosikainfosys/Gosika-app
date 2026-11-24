@@ -7,33 +7,78 @@ class OrderService {
 
   OrderService(this._apiClient);
 
-  Future<PaginatedResponse<Order>> getOrders({int page = 1, String? status}) async {
-    final response = await _apiClient.dio.get('/orders', queryParameters: {
-      'page': page,
-      'status': status,
-    }..removeWhere((k, v) => v == null));
-    
-    final List data = response.data['data'];
-    // Assuming catalog_service's PaginationMeta is reusable or similar
-    // For now, simple list
-    return PaginatedResponse(
-      data: data.map((e) => Order.fromJson(e)).toList(),
-      meta: PaginationMeta.fromJson(response.data['meta']),
-    );
+  Future<PaginatedResponse<Order>> getOrders({
+    int page = 1,
+    String? status,
+    String? search,
+    int perPage = 15,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/orders',
+        queryParameters: {
+          'page': page,
+          'per_page': perPage,
+          if (status != null && status.isNotEmpty) 'status': status,
+          if (search != null && search.isNotEmpty) 'search': search,
+          if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
+          if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
+        },
+      );
+
+      final List data = response.data['data'] as List? ?? [];
+      final orders = data.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+
+      PaginationMeta meta = PaginationMeta(currentPage: page, lastPage: 1, total: orders.length, perPage: perPage);
+      if (response.data['meta'] != null) {
+        meta = PaginationMeta.fromJson(response.data['meta']);
+      }
+
+      return PaginatedResponse(data: orders, meta: meta);
+    } catch (e) {
+      throw ApiClient.parseError(e);
+    }
   }
 
   Future<Order> getOrderDetail(String id) async {
-    final response = await _apiClient.dio.get('/orders/$id');
-    return Order.fromJson(response.data['data']);
+    try {
+      final response = await _apiClient.dio.get('/orders/$id');
+      final data = response.data['data'] ?? response.data;
+      return Order.fromJson(data as Map<String, dynamic>);
+    } catch (e) {
+      throw ApiClient.parseError(e);
+    }
   }
 
   Future<List<OrderTracking>> getTracking(String id) async {
-    final response = await _apiClient.dio.get('/orders/$id/tracking');
-    final List data = response.data['data'];
-    return data.map((e) => OrderTracking.fromJson(e)).toList();
+    try {
+      final response = await _apiClient.dio.get('/orders/$id/tracking');
+      final List data = response.data['data'] as List? ?? [];
+      return data.map((e) => OrderTracking.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      throw ApiClient.parseError(e);
+    }
   }
 
-  Future<void> cancelOrder(String id, String reason) async {
-    await _apiClient.dio.post('/orders/$id/cancel', data: {'reason': reason});
+  Future<Order> cancelOrder(
+    String id, {
+    required String reason,
+    String? explanation,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/orders/$id/cancel',
+        data: {
+          'reason': reason,
+          if (explanation != null && explanation.isNotEmpty) 'explanation': explanation,
+        },
+      );
+      final data = response.data['data'] ?? response.data;
+      return Order.fromJson(data as Map<String, dynamic>);
+    } catch (e) {
+      throw ApiClient.parseError(e);
+    }
   }
 }

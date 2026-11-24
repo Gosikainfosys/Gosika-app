@@ -30,18 +30,19 @@ class ConversationsNotifier extends StateNotifier<AsyncValue<List<Conversation>>
   }
 
   Future<void> loadConversations() async {
+    final isAuthenticated = _ref.read(authProvider).isAuthenticated;
+    if (!isAuthenticated) {
+      state = const AsyncValue.data([]);
+      return;
+    }
     try {
-      final isAuthenticated = _ref.read(authProvider).isAuthenticated;
-      if (!isAuthenticated) {
-        state = const AsyncValue.data([]);
-        return;
-      }
+      state = const AsyncValue.loading();
       final list = await _service.getConversations();
       state = AsyncValue.data(list);
     } catch (e, st) {
       final isAuthenticated = _ref.read(authProvider).isAuthenticated;
       final errorMsg = ApiClient.parseError(e).toLowerCase();
-      if (!isAuthenticated || errorMsg.contains('unauthenticated') || errorMsg.contains('401') || errorMsg.contains('invalid')) {
+      if (!isAuthenticated || errorMsg.contains('unauthenticated') || errorMsg.contains('401') || errorMsg.contains('unauthorized')) {
         state = const AsyncValue.data([]);
       } else {
         state = AsyncValue.error(e, st);
@@ -59,14 +60,20 @@ class ConversationsNotifier extends StateNotifier<AsyncValue<List<Conversation>>
       final list = await _service.getConversations();
       state = AsyncValue.data(list);
     } catch (e) {
-      // Keep existing state on error
+      // Keep existing state
     }
   }
 
   Future<Conversation> getOrCreateSupport() async {
-    final supportConv = await _service.getOrCreateSupportConversation();
+    final supportConv = await _service.getOrCreateConversation(type: 'support');
     refresh();
     return supportConv;
+  }
+
+  Future<Conversation> getOrCreateStoreChat(String storeId) async {
+    final conv = await _service.getOrCreateConversation(type: 'store', storeId: storeId);
+    refresh();
+    return conv;
   }
 }
 
@@ -110,6 +117,7 @@ class ConversationDetailNotifier extends StateNotifier<AsyncValue<Conversation>>
       state = const AsyncValue.loading();
       final conv = await _service.getConversationDetail(conversationId);
       state = AsyncValue.data(conv);
+      _service.markAsRead(conversationId);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -124,7 +132,6 @@ class ConversationDetailNotifier extends StateNotifier<AsyncValue<Conversation>>
         return;
       }
 
-      // Preserve any local pending messages while updating with fetched messages
       final pendingMessages = current.messages.where((m) => m.isPending).toList();
       final fetchedMessages = List<ChatMessage>.from(conv.messages);
 
@@ -137,7 +144,6 @@ class ConversationDetailNotifier extends StateNotifier<AsyncValue<Conversation>>
       }
 
       fetchedMessages.sort((a, b) => a.cursor.compareTo(b.cursor));
-
       state = AsyncValue.data(conv.copyWith(messages: fetchedMessages));
     } catch (e) {
       // Ignore polling errors silently
@@ -175,30 +181,26 @@ class ConversationDetailNotifier extends StateNotifier<AsyncValue<Conversation>>
         imageFiles: imageFiles,
       );
 
-      final latestConv = state.value;
-      if (latestConv != null) {
-        final replacedList = latestConv.messages.map((m) {
+      final confirmedConv = state.value;
+      if (confirmedConv != null) {
+        final finalMessages = confirmedConv.messages.map((m) {
           if (m.clientUuid == clientUuid || m.id == clientUuid) {
             return sentMsg;
           }
           return m;
         }).toList();
 
-        replacedList.sort((a, b) => a.cursor.compareTo(b.cursor));
-        state = AsyncValue.data(latestConv.copyWith(
-          messages: replacedList,
-          lastMessage: sentMsg,
-        ));
+        finalMessages.sort((a, b) => a.cursor.compareTo(b.cursor));
+        state = AsyncValue.data(confirmedConv.copyWith(messages: finalMessages));
       }
 
-      // Refresh list provider
       _ref.read(conversationsListProvider.notifier).refresh();
     } catch (e) {
-      // Revert pending message on error
-      final latestConv = state.value;
-      if (latestConv != null) {
-        final revertedList = latestConv.messages.where((m) => m.clientUuid != clientUuid).toList();
-        state = AsyncValue.data(latestConv.copyWith(messages: revertedList));
+      // Rollback on error
+      final failedConv = state.value;
+      if (failedConv != null) {
+        final rolledBack = failedConv.messages.where((m) => m.clientUuid != clientUuid).toList();
+        state = AsyncValue.data(failedConv.copyWith(messages: rolledBack));
       }
       rethrow;
     }

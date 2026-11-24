@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_provider.dart';
-import '../models/product.dart';
 import '../services/wishlist_service.dart';
 
 final wishlistServiceProvider = Provider((ref) {
@@ -8,19 +7,31 @@ final wishlistServiceProvider = Provider((ref) {
   return WishlistService(apiClient);
 });
 
-final wishlistProvider = StateNotifierProvider<WishlistNotifier, AsyncValue<List<Product>>>((ref) {
+final wishlistProvider = StateNotifierProvider<WishlistNotifier, AsyncValue<List<WishlistItem>>>((ref) {
   final service = ref.watch(wishlistServiceProvider);
-  return WishlistNotifier(service);
+  return WishlistNotifier(service, ref);
 });
 
-class WishlistNotifier extends StateNotifier<AsyncValue<List<Product>>> {
+class WishlistNotifier extends StateNotifier<AsyncValue<List<WishlistItem>>> {
   final WishlistService _service;
+  final Ref _ref;
 
-  WishlistNotifier(this._service) : super(const AsyncValue.loading()) {
+  WishlistNotifier(this._service, this._ref) : super(const AsyncValue.loading()) {
     fetchWishlist();
+
+    _ref.listen<AuthState>(authProvider, (previous, next) {
+      if (previous?.isAuthenticated != next.isAuthenticated && next.isAuthenticated) {
+        fetchWishlist();
+      }
+    });
   }
 
   Future<void> fetchWishlist() async {
+    final isAuthenticated = _ref.read(authProvider).isAuthenticated;
+    if (!isAuthenticated) {
+      state = const AsyncValue.data([]);
+      return;
+    }
     state = const AsyncValue.loading();
     try {
       final items = await _service.getWishlist();
@@ -32,7 +43,7 @@ class WishlistNotifier extends StateNotifier<AsyncValue<List<Product>>> {
 
   Future<void> toggleWishlist(String productId) async {
     final currentItems = state.value ?? [];
-    final isExist = currentItems.any((e) => e.id == productId);
+    final isExist = currentItems.any((item) => item.productId == productId || item.product.id == productId);
 
     try {
       if (isExist) {
@@ -42,11 +53,11 @@ class WishlistNotifier extends StateNotifier<AsyncValue<List<Product>>> {
       }
       await fetchWishlist();
     } catch (e) {
-      // Handle error
+      rethrow;
     }
   }
 
   bool isWishlisted(String productId) {
-    return state.value?.any((e) => e.id == productId) ?? false;
+    return state.value?.any((item) => item.productId == productId || item.product.id == productId) ?? false;
   }
 }
