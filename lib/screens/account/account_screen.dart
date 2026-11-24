@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../message/message_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -73,7 +74,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   void _openSupportChat(BuildContext context, String conversationId, String title) {
-    context.push('/shop'); // Fallback or open message tab / sheet
+    showChatDetailSheet(context, conversationId, title);
   }
 
   void _showHelpCenter(BuildContext context) {

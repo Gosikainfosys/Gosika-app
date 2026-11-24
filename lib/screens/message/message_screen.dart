@@ -526,16 +526,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> with SingleTicker
   }
 
   void _openChatDetail(BuildContext context, String conversationId, String title) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _ChatDetailSheet(
-        conversationId: conversationId,
-        title: title,
-      ),
-    );
+    showChatDetailSheet(context, conversationId, title);
   }
 
   IconData _getNotificationIcon(String? type, String title) {
@@ -607,21 +598,35 @@ class _MessageScreenState extends ConsumerState<MessageScreen> with SingleTicker
   }
 }
 
+void showChatDetailSheet(BuildContext context, String conversationId, String title) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => ChatDetailSheet(
+      conversationId: conversationId,
+      title: title,
+    ),
+  );
+}
+
 // --- CHAT DETAIL SHEET ---
-class _ChatDetailSheet extends ConsumerStatefulWidget {
+class ChatDetailSheet extends ConsumerStatefulWidget {
   final String conversationId;
   final String title;
 
-  const _ChatDetailSheet({
+  const ChatDetailSheet({
+    super.key,
     required this.conversationId,
     required this.title,
   });
 
   @override
-  ConsumerState<_ChatDetailSheet> createState() => _ChatDetailSheetState();
+  ConsumerState<ChatDetailSheet> createState() => _ChatDetailSheetState();
 }
 
-class _ChatDetailSheetState extends ConsumerState<_ChatDetailSheet> {
+class _ChatDetailSheetState extends ConsumerState<ChatDetailSheet> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
