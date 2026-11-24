@@ -100,7 +100,9 @@ class _CartPageState extends State<CartPage> {
           ],
         ),
       ),
-      onDismissed: (_) => _remove(item.id),
+      onDismissed: (_) {
+        context.read<CartProvider>().removeItem(item.id);
+      },
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -383,7 +385,6 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<void> _remove(String itemId) async {
-    setState(() => _loadingItems.add(itemId));
     try {
       await context.read<CartProvider>().removeItem(itemId);
     } catch (e) {
@@ -392,8 +393,6 @@ class _CartPageState extends State<CartPage> {
           const SnackBar(content: Text('Failed to remove item')),
         );
       }
-    } finally {
-      if (mounted) setState(() => _loadingItems.remove(itemId));
     }
   }
 

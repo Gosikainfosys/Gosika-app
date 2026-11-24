@@ -85,9 +85,9 @@ class CartProvider extends ChangeNotifier {
           variantName: variantName,
         ));
       }
-      final newCount = newItems.fold(0, (sum, item) => sum + item.quantity);
+      final newCount = newItems.fold<int>(0, (sum, item) => sum + item.quantity);
       final newSubtotal =
-          newItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+          newItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice);
       _cart = _cart.copyWith(
         items: newItems,
         itemCount: newCount,
@@ -105,67 +105,100 @@ class CartProvider extends ChangeNotifier {
       return;
     }
 
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      _cart = await _service.updateQuantity(id, quantity);
-    } catch (e) {
-      final index = _cart.items.indexWhere((i) => i.id == id);
-      if (index >= 0) {
-        List<CartItem> newItems = List.from(_cart.items);
-        newItems[index] = newItems[index].copyWith(quantity: quantity);
-        final newCount = newItems.fold(0, (sum, item) => sum + item.quantity);
-        final newSubtotal =
-            newItems.fold(0.0, (sum, item) => sum + item.totalPrice);
-        _cart = _cart.copyWith(
-          items: newItems,
-          itemCount: newCount,
-          subtotal: newSubtotal,
-        );
-      }
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> removeItem(String id) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      _cart = await _service.removeItem(id);
-    } catch (e) {
+    final index = _cart.items.indexWhere((i) => i.id == id);
+    if (index >= 0) {
+      final oldItem = _cart.items[index];
       List<CartItem> newItems = List.from(_cart.items);
-      newItems.removeWhere((i) => i.id == id);
-      final newCount = newItems.fold(0, (sum, item) => sum + item.quantity);
+      newItems[index] = oldItem.copyWith(quantity: quantity);
+      final newCount = newItems.fold<int>(0, (sum, item) => sum + item.quantity);
       final newSubtotal =
-          newItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+          newItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice);
       _cart = _cart.copyWith(
         items: newItems,
         itemCount: newCount,
         subtotal: newSubtotal,
       );
-    } finally {
-      _isLoading = false;
+      notifyListeners();
+
+      try {
+        _cart = await _service.updateQuantity(id, quantity);
+        notifyListeners();
+      } catch (e) {
+        // Revert on error
+        List<CartItem> revertedItems = List.from(_cart.items);
+        final revIndex = revertedItems.indexWhere((i) => i.id == id);
+        if (revIndex >= 0) {
+          revertedItems[revIndex] = oldItem;
+          final revCount =
+              revertedItems.fold<int>(0, (sum, item) => sum + item.quantity);
+          final revSubtotal = revertedItems.fold<double>(
+              0.0, (sum, item) => sum + item.totalPrice);
+          _cart = _cart.copyWith(
+            items: revertedItems,
+            itemCount: revCount,
+            subtotal: revSubtotal,
+          );
+          notifyListeners();
+        }
+      }
+    }
+  }
+
+  Future<void> removeItem(String id) async {
+    // 1. Optimistically remove item from local cart state IMMEDIATELY
+    final index = _cart.items.indexWhere((i) => i.id == id);
+    if (index < 0) return;
+
+    final removedItem = _cart.items[index];
+    final newItems = List<CartItem>.from(_cart.items)..removeAt(index);
+    final newCount = newItems.fold<int>(0, (sum, item) => sum + item.quantity);
+    final newSubtotal =
+        newItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice);
+
+    _cart = _cart.copyWith(
+      items: newItems,
+      itemCount: newCount,
+      subtotal: newSubtotal,
+    );
+    _isLoading = false;
+    _error = null;
+    notifyListeners(); // Synchronously notifies listeners so onDismissed frame has updated list!
+
+    // 2. Perform API call in background, revert if network fails
+    try {
+      final updatedCart = await _service.removeItem(id);
+      _cart = updatedCart;
+      notifyListeners();
+    } catch (e) {
+      // Revert local removal on failure
+      final revertedItems = List<CartItem>.from(_cart.items)
+        ..insert(index, removedItem);
+      final revertedCount =
+          revertedItems.fold<int>(0, (sum, item) => sum + item.quantity);
+      final revertedSubtotal = revertedItems.fold<double>(
+          0.0, (sum, item) => sum + item.totalPrice);
+      _cart = _cart.copyWith(
+        items: revertedItems,
+        itemCount: revertedCount,
+        subtotal: revertedSubtotal,
+      );
+      _error = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
     }
   }
 
   Future<void> clearCart() async {
-    _isLoading = true;
+    final oldCart = _cart;
+    _cart = CartModel.empty();
+    _isLoading = false;
     _error = null;
     notifyListeners();
 
     try {
       await _service.clearCart();
-    } catch (_) {
-    } finally {
-      _cart = CartModel.empty();
-      _isLoading = false;
+    } catch (e) {
+      _cart = oldCart;
+      _error = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
     }
   }
