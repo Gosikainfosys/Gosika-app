@@ -2,34 +2,58 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api_client.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
+import 'auth_provider.dart';
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService(ApiClient());
 });
 
 final notificationListProvider = StateNotifierProvider<NotificationListNotifier, AsyncValue<NotificationResponse>>((ref) {
-  return NotificationListNotifier(ref.watch(notificationServiceProvider));
+  return NotificationListNotifier(ref.watch(notificationServiceProvider), ref);
 });
 
 class NotificationListNotifier extends StateNotifier<AsyncValue<NotificationResponse>> {
   final NotificationService _service;
+  final Ref _ref;
 
-  NotificationListNotifier(this._service) : super(const AsyncValue.loading()) {
+  NotificationListNotifier(this._service, this._ref) : super(const AsyncValue.loading()) {
     loadNotifications();
+
+    _ref.listen<AuthState>(authProvider, (previous, next) {
+      if (previous?.isAuthenticated != next.isAuthenticated && next.isAuthenticated) {
+        loadNotifications();
+      }
+    });
   }
 
   Future<void> loadNotifications() async {
     try {
+      final isAuthenticated = _ref.read(authProvider).isAuthenticated;
+      if (!isAuthenticated) {
+        state = AsyncValue.data(NotificationResponse(notifications: [], unreadCount: 0));
+        return;
+      }
       state = const AsyncValue.loading();
       final res = await _service.getNotifications();
       state = AsyncValue.data(res);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      final isAuthenticated = _ref.read(authProvider).isAuthenticated;
+      final errorMsg = ApiClient.parseError(e).toLowerCase();
+      if (!isAuthenticated || errorMsg.contains('unauthenticated') || errorMsg.contains('401') || errorMsg.contains('unauthorized')) {
+        state = AsyncValue.data(NotificationResponse(notifications: [], unreadCount: 0));
+      } else {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
   Future<void> refresh() async {
     try {
+      final isAuthenticated = _ref.read(authProvider).isAuthenticated;
+      if (!isAuthenticated) {
+        state = AsyncValue.data(NotificationResponse(notifications: [], unreadCount: 0));
+        return;
+      }
       final res = await _service.getNotifications();
       state = AsyncValue.data(res);
     } catch (e) {
