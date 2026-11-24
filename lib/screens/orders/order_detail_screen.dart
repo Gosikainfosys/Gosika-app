@@ -340,7 +340,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
                 // Section H — Return Window
                 if (order.canRequestReturn)
-                  _buildReturnWindowSection(order.returnWindowExpiresAt),
+                  _buildReturnWindowSection(context, order.returnWindowExpiresAt),
 
                 const SizedBox(height: 40),
               ],
@@ -719,7 +719,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   // Section H: Return Window
-  Widget _buildReturnWindowSection(DateTime? returnWindowExpiresAt) {
+  Widget _buildReturnWindowSection(BuildContext context, DateTime? returnWindowExpiresAt) {
     final dateStr = returnWindowExpiresAt != null
         ? DateFormat('MMM d, yyyy').format(returnWindowExpiresAt)
         : '';
