@@ -10,6 +10,7 @@ import '../../core/payment_utils.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/order.dart';
 import '../../providers/order_provider.dart';
+import '../../widgets/order_tracker_line.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -366,161 +367,13 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
-  // Section A: Horizontal Stepper
+  // Section A: Horizontal Stepper with Animating Truck & Air Particles
   Widget _buildStatusTracker(String status, String? cancelReason) {
-    final s = status.toLowerCase();
-    final isCancelled = s == 'cancelled' || s == 'rejected' || s == 'failed';
-
-    if (isCancelled) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.red.shade200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.cancel_outlined, color: Colors.red.shade700, size: 24),
-                const SizedBox(width: 10),
-                Text(
-                  'Order Cancelled / Failed',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red.shade800),
-                ),
-              ],
-            ),
-            if (cancelReason != null && cancelReason.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Reason: $cancelReason',
-                style: TextStyle(fontSize: 13, color: Colors.red.shade900),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-
-    final List<Map<String, dynamic>> allSteps = [
-      {'key': 'payment_pending', 'label': 'Payment Pending', 'aliases': <String>['unpaid']},
-      {'key': 'pending', 'label': 'Pending', 'aliases': <String>[]},
-      {'key': 'confirmed', 'label': 'Confirmed', 'aliases': <String>['accepted']},
-      {'key': 'processing', 'label': 'Processing', 'aliases': <String>['preparing']},
-      {'key': 'ready_for_pickup', 'label': 'Ready for Pickup', 'aliases': <String>[]},
-      {'key': 'picked_up', 'label': 'Picked Up', 'aliases': <String>[]},
-      {'key': 'out_for_delivery', 'label': 'Out for Delivery', 'aliases': <String>[]},
-      {'key': 'delivered', 'label': 'Delivered', 'aliases': <String>[]},
-      {'key': 'completed', 'label': 'Completed', 'aliases': <String>[]},
-    ];
-
-    final steps = s == 'payment_pending'
-        ? allSteps
-        : allSteps.where((step) => step['key'] != 'payment_pending').toList();
-
-    int currentIndex = -1;
-    for (int i = 0; i < steps.length; i++) {
-      final key = steps[i]['key'] as String;
-      final aliases = List<String>.from(steps[i]['aliases'] as List);
-      if (s == key || aliases.contains(s)) {
-        currentIndex = i;
-        break;
-      }
-    }
-    if (currentIndex == -1) currentIndex = 0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: List.generate(steps.length, (index) {
-            final isCompleted = index <= currentIndex;
-            final isLast = index == steps.length - 1;
-            final label = steps[index]['label'] as String;
-
-            return SizedBox(
-              width: 90,
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 3,
-                          color: index == 0
-                              ? Colors.transparent
-                              : (index <= currentIndex ? AppColors.primaryOrange : Colors.grey.shade300),
-                        ),
-                      ),
-                      Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isCompleted ? AppColors.primaryOrange : Colors.white,
-                          border: Border.all(
-                            color: isCompleted ? AppColors.primaryOrange : Colors.grey.shade400,
-                            width: 2,
-                          ),
-                        ),
-                        child: Center(
-                          child: isCompleted
-                              ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
-                              : Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          height: 3,
-                          color: isLast
-                              ? Colors.transparent
-                              : (index < currentIndex ? AppColors.primaryOrange : Colors.grey.shade300),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: isCompleted ? FontWeight.bold : FontWeight.w500,
-                      color: isCompleted ? kNavy : Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ),
-      ),
+    return AnimatedOrderTrackerLine(
+      status: status,
+      cancelReason: cancelReason,
     );
+  }
   }
 
   // Section C: Delivery OTP Box
