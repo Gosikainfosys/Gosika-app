@@ -184,7 +184,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/checkout',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final selectedIds = extra?['selectedItemIds'] as List<String>?;
+          final selectedIds = (extra?['selectedItemIds'] as List?)?.cast<String>();
           return CheckoutScreen(selectedItemIds: selectedIds);
         },
       ),

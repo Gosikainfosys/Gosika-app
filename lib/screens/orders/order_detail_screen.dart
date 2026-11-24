@@ -405,15 +405,15 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
 
     final List<Map<String, dynamic>> allSteps = [
-      {'key': 'payment_pending', 'label': 'Payment Pending', 'aliases': ['unpaid']},
-      {'key': 'pending', 'label': 'Pending', 'aliases': []},
-      {'key': 'confirmed', 'label': 'Confirmed', 'aliases': ['accepted']},
-      {'key': 'processing', 'label': 'Processing', 'aliases': ['preparing']},
-      {'key': 'ready_for_pickup', 'label': 'Ready for Pickup', 'aliases': []},
-      {'key': 'picked_up', 'label': 'Picked Up', 'aliases': []},
-      {'key': 'out_for_delivery', 'label': 'Out for Delivery', 'aliases': []},
-      {'key': 'delivered', 'label': 'Delivered', 'aliases': []},
-      {'key': 'completed', 'label': 'Completed', 'aliases': []},
+      {'key': 'payment_pending', 'label': 'Payment Pending', 'aliases': <String>['unpaid']},
+      {'key': 'pending', 'label': 'Pending', 'aliases': <String>[]},
+      {'key': 'confirmed', 'label': 'Confirmed', 'aliases': <String>['accepted']},
+      {'key': 'processing', 'label': 'Processing', 'aliases': <String>['preparing']},
+      {'key': 'ready_for_pickup', 'label': 'Ready for Pickup', 'aliases': <String>[]},
+      {'key': 'picked_up', 'label': 'Picked Up', 'aliases': <String>[]},
+      {'key': 'out_for_delivery', 'label': 'Out for Delivery', 'aliases': <String>[]},
+      {'key': 'delivered', 'label': 'Delivered', 'aliases': <String>[]},
+      {'key': 'completed', 'label': 'Completed', 'aliases': <String>[]},
     ];
 
     final steps = s == 'payment_pending'
@@ -423,7 +423,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     int currentIndex = -1;
     for (int i = 0; i < steps.length; i++) {
       final key = steps[i]['key'] as String;
-      final aliases = steps[i]['aliases'] as List<String>;
+      final aliases = (steps[i]['aliases'] as List).cast<String>();
       if (s == key || aliases.contains(s)) {
         currentIndex = i;
         break;
