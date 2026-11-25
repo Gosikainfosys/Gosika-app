@@ -132,22 +132,22 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 
             // Product Details Section
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     product.name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      height: 1.25,
+                      height: 1.2,
                       color: kInk,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
 
                   // Price Row
                   Row(
@@ -157,7 +157,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       Text(
                         formatNPR(product.price),
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFFFF5722),
                         ),
@@ -178,25 +178,25 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
 
                   // Rating Row
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFB800)),
+                      const Icon(Icons.star_rounded, size: 13, color: Color(0xFFFFB800)),
                       const SizedBox(width: 2),
                       Text(
                         '${product.ratingAvg.toStringAsFixed(1)}',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kInk),
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: kInk),
                       ),
                       const SizedBox(width: 2),
                       Text(
                         '(${product.ratingCount})',
-                        style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 9.5, color: Colors.grey[600]),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   // Full Width Add to Cart / Quantity Stepper Button
                   AddToCartButton(

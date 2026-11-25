@@ -10,9 +10,19 @@ class CatalogService {
   CatalogService(this._apiClient);
 
   Future<List<Banner>> getBanners() async {
-    final response = await _apiClient.dio.get('/banners');
-    final List data = response.data['data'];
-    return data.map((e) => Banner.fromJson(e)).toList();
+    try {
+      final response = await _apiClient.dio.get('/banners');
+      final dynamic resData = response.data;
+      List rawList = [];
+      if (resData is Map && resData.containsKey('data') && resData['data'] is List) {
+        rawList = resData['data'];
+      } else if (resData is List) {
+        rawList = resData;
+      }
+      return rawList.map((e) => Banner.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<Category>> getCategories() async {

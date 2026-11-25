@@ -374,7 +374,6 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       cancelReason: cancelReason,
     );
   }
-  }
 
   // Section C: Delivery OTP Box
   Widget _buildDeliveryOtpSection(String otp) {

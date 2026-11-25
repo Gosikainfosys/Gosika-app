@@ -1,16 +1,19 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Banner;
 import 'package:go_router/go_router.dart';
 import '../../../core/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../models/campaign.dart';
+import '../../../models/product.dart';
 
 class PromoBanner extends StatefulWidget {
+  final List<Banner>? banners;
   final List<Campaign>? campaigns;
 
   const PromoBanner({
     super.key,
+    this.banners,
     this.campaigns,
   });
 
@@ -30,13 +33,23 @@ class _PromoBannerState extends State<PromoBanner> {
     _startAutoPlay();
   }
 
+  int get _itemCount {
+    if (widget.banners != null && widget.banners!.isNotEmpty) {
+      return widget.banners!.length;
+    }
+    if (widget.campaigns != null && widget.campaigns!.isNotEmpty) {
+      return widget.campaigns!.length;
+    }
+    return 0;
+  }
+
   void _startAutoPlay() {
-    final list = widget.campaigns;
-    if (list != null && list.length > 1) {
-      _timer?.cancel();
+    final count = _itemCount;
+    _timer?.cancel();
+    if (count > 1) {
       _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
         if (!mounted || !_pageController.hasClients) return;
-        final nextPage = (_activePage + 1) % list.length;
+        final nextPage = (_activePage + 1) % count;
         _pageController.animateToPage(
           nextPage,
           duration: const Duration(milliseconds: 350),
@@ -49,7 +62,7 @@ class _PromoBannerState extends State<PromoBanner> {
   @override
   void didUpdateWidget(covariant PromoBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.campaigns != oldWidget.campaigns) {
+    if (widget.banners != oldWidget.banners || widget.campaigns != oldWidget.campaigns) {
       _startAutoPlay();
     }
   }
@@ -61,11 +74,27 @@ class _PromoBannerState extends State<PromoBanner> {
     super.dispose();
   }
 
+  void _handleBannerTap(String? link) {
+    if (link != null && link.isNotEmpty) {
+      if (link.startsWith('/')) {
+        context.push(link);
+      } else if (link.startsWith('http://') || link.startsWith('https://')) {
+        context.push('/shop');
+      } else {
+        context.push('/shop');
+      }
+    } else {
+      context.push('/shop');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final list = widget.campaigns;
+    final banners = widget.banners;
+    final campaigns = widget.campaigns;
 
-    if (list != null && list.isNotEmpty) {
+    // 1. Render Real API Hero Banners if available (/api/v1/banners)
+    if (banners != null && banners.isNotEmpty) {
       return Column(
         children: [
           SizedBox(
@@ -75,9 +104,194 @@ class _PromoBannerState extends State<PromoBanner> {
               onPageChanged: (index) {
                 setState(() => _activePage = index);
               },
-              itemCount: list.length,
+              itemCount: banners.length,
               itemBuilder: (context, index) {
-                final c = list[index];
+                final b = banners[index];
+                final imageUrl = ApiClient.apiImage(b.imageUrl);
+                final hasTitleOrDesc = (b.title != null && b.title!.isNotEmpty) ||
+                    (b.description != null && b.description!.isNotEmpty);
+
+                return GestureDetector(
+                  onTap: () => _handleBannerTap(b.link),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFF3F4F6),
+                          const Color(0xFFE5E7EB).withValues(alpha: 0.8),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x10000000),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (hasTitleOrDesc)
+                          Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Row(
+                              children: [
+                                // Left Text Column
+                                Expanded(
+                                  flex: 6,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      if (b.title != null && b.title!.isNotEmpty)
+                                        Text(
+                                          b.title!,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.darkText,
+                                          ),
+                                        ),
+                                      const SizedBox(height: 4),
+
+                                      if (b.description != null && b.description!.isNotEmpty)
+                                        Text(
+                                          b.description!,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTextStyles.heading1.copyWith(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                            color: AppColors.darkText,
+                                            height: 1.1,
+                                          ),
+                                        )
+                                      else
+                                        Text(
+                                          'Special Offer',
+                                          style: AppTextStyles.heading1.copyWith(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w900,
+                                            color: AppColors.darkText,
+                                            height: 1.1,
+                                          ),
+                                        ),
+                                      const SizedBox(height: 12),
+
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryOrange,
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: Color(0x30FF5722),
+                                              blurRadius: 8,
+                                              offset: Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          'Get Now',
+                                          style: AppTextStyles.button.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Right Image
+                                if (imageUrl.isNotEmpty)
+                                  Expanded(
+                                    flex: 5,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) =>
+                                            const Icon(
+                                          Icons.shopping_bag_rounded,
+                                          size: 70,
+                                          color: AppColors.primaryOrange,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          )
+                        else if (imageUrl.isNotEmpty)
+                          Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => const Center(
+                              child: Icon(
+                                Icons.shopping_bag_rounded,
+                                size: 70,
+                                color: AppColors.primaryOrange,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Dynamic Indicators
+          if (banners.length > 1)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                banners.length,
+                (index) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: index == _activePage ? 16 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: index == _activePage
+                        ? AppColors.primaryOrange
+                        : AppColors.border,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
+    // 2. Render Campaigns if banners are empty but campaigns exist
+    if (campaigns != null && campaigns.isNotEmpty) {
+      return Column(
+        children: [
+          SizedBox(
+            height: 170,
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() => _activePage = index);
+              },
+              itemCount: campaigns.length,
+              itemBuilder: (context, index) {
+                final c = campaigns[index];
                 final imageUrl = ApiClient.apiImage(c.image);
 
                 return Container(
@@ -108,7 +322,6 @@ class _PromoBannerState extends State<PromoBanner> {
                         padding: const EdgeInsets.all(18),
                         child: Row(
                           children: [
-                            // Left Text Column matching design template
                             Expanded(
                               flex: 6,
                               child: Column(
@@ -177,7 +390,6 @@ class _PromoBannerState extends State<PromoBanner> {
                               ),
                             ),
 
-                            // Right Image
                             if (imageUrl.isNotEmpty)
                               Expanded(
                                 flex: 5,
@@ -206,12 +418,11 @@ class _PromoBannerState extends State<PromoBanner> {
           ),
           const SizedBox(height: 10),
 
-          // Indicators
-          if (list.length > 1)
+          if (campaigns.length > 1)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                list.length,
+                campaigns.length,
                 (index) => Container(
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   width: index == _activePage ? 16 : 6,
@@ -229,7 +440,7 @@ class _PromoBannerState extends State<PromoBanner> {
       );
     }
 
-    // Default Fallback Banner template matching design mockup
+    // 3. Fallback Banner template matching design mockup in Orange Theme
     return Column(
       children: [
         Container(
@@ -297,11 +508,11 @@ class _PromoBannerState extends State<PromoBanner> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50),
+                            color: AppColors.primaryOrange,
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: const [
                               BoxShadow(
-                                color: Color(0x304CAF50),
+                                color: Color(0x30FF5722),
                                 blurRadius: 8,
                                 offset: Offset(0, 3),
                               ),
@@ -350,7 +561,7 @@ class _PromoBannerState extends State<PromoBanner> {
               height: 6,
               decoration: BoxDecoration(
                 color: index == 0
-                    ? const Color(0xFF4CAF50)
+                    ? AppColors.primaryOrange
                     : AppColors.border,
                 borderRadius: BorderRadius.circular(3),
               ),

@@ -117,25 +117,36 @@ class Category {
 class Banner {
   final String id;
   final String? title;
+  final String? description;
   final String imageUrl;
+  final String? link;
   final String? linkType;
   final String? linkId;
+  final int? position;
 
   Banner({
     required this.id,
     this.title,
+    this.description,
     required this.imageUrl,
+    this.link,
     this.linkType,
     this.linkId,
+    this.position,
   });
 
   factory Banner.fromJson(Map<String, dynamic> json) {
     return Banner(
-      id: json['id'],
-      title: json['title'],
-      imageUrl: json['image_url'],
-      linkType: json['link_type'],
-      linkId: json['link_id'],
+      id: json['id']?.toString() ?? '',
+      title: json['title'] as String?,
+      description: json['description'] as String?,
+      imageUrl: (json['image'] ?? json['image_url'] ?? json['imageUrl'] ?? '').toString(),
+      link: json['link'] as String?,
+      linkType: json['link_type'] as String?,
+      linkId: json['link_id']?.toString(),
+      position: json['position'] is int
+          ? json['position']
+          : int.tryParse(json['position']?.toString() ?? ''),
     );
   }
 }

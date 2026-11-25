@@ -95,7 +95,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Row(
                 children: [
                   AppBackButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/home');
+                      }
+                    },
                   ),
                   const Spacer(),
                 ],

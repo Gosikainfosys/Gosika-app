@@ -68,6 +68,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         authState.isAuthenticated && user != null && user.emailVerifiedAt == null && !_bannerDismissed;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.transparent,
       body: SafeArea(
         top: showUnverifiedBanner,
