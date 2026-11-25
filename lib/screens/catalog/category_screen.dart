@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Banner;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
@@ -6,6 +6,8 @@ import '../../core/constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/product.dart';
 import '../../providers/catalog_provider.dart';
+import '../../widgets/hanging_search_filter_overlay.dart';
+import '../home/widgets/home_search_bar.dart';
 
 class CategoryScreen extends ConsumerStatefulWidget {
   const CategoryScreen({super.key});
@@ -16,17 +18,51 @@ class CategoryScreen extends ConsumerStatefulWidget {
 
 class _CategoryScreenState extends ConsumerState<CategoryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _minPriceController = TextEditingController();
+  final TextEditingController _maxPriceController = TextEditingController();
+
+  bool _isOverlayOpen = false;
+  bool _isFilterTab = false;
   String _searchQuery = '';
+
+  RangeValues _priceRangeValues = const RangeValues(0, 150000);
+  int? _selectedRating;
+  final Set<String> _selectedBrands = {};
+  final Set<String> _selectedCategories = {};
 
   @override
   void dispose() {
     _searchController.dispose();
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
     super.dispose();
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _searchController.clear();
+      _minPriceController.clear();
+      _maxPriceController.clear();
+      _searchQuery = '';
+      _isFilterTab = false;
+      _priceRangeValues = const RangeValues(0, 150000);
+      _selectedRating = null;
+      _selectedBrands.clear();
+      _selectedCategories.clear();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
+    final brandsAsync = ref.watch(brandsProvider);
+    final allProductsAsync = ref.watch(allProductsProvider);
+
+    final mediaTopPadding = MediaQuery.of(context).padding.top;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    final double availableOverlayHeight = (MediaQuery.of(context).size.height - mediaTopPadding - 110 - keyboardHeight)
+        .clamp(120.0, MediaQuery.of(context).size.height * 0.70);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -38,97 +74,140 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kNavy),
         ),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Search in categories field
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(23),
-                border: Border.all(color: Colors.grey.shade200),
+          Column(
+            children: [
+              // Modern HomeSearchBar
+              HomeSearchBar(
+                controller: _searchController,
+                hintText: 'Search in categories...',
+                onTap: () {
+                  setState(() => _isOverlayOpen = true);
+                },
+                onChanged: (val) {
+                  setState(() {
+                    _searchQuery = val.trim().toLowerCase();
+                    _isOverlayOpen = true;
+                  });
+                },
+                onFilterTap: () {
+                  setState(() {
+                    _isOverlayOpen = true;
+                    _isFilterTab = true;
+                  });
+                },
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search, color: Colors.grey, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val.trim().toLowerCase();
-                        });
+              const SizedBox(height: 12),
+
+              // Categories List Content
+              Expanded(
+                child: categoriesAsync.when(
+                  data: (categories) {
+                    final filtered = _searchQuery.isEmpty
+                        ? categories
+                        : categories.where((c) => c.name.toLowerCase().contains(_searchQuery)).toList();
+
+                    if (filtered.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.category_outlined, size: 48, color: Colors.grey),
+                            const SizedBox(height: 12),
+                            Text(
+                              _searchQuery.isEmpty ? 'No categories available' : 'No categories matching "$_searchQuery"',
+                              style: const TextStyle(color: Colors.grey, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+                      itemCount: filtered.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final category = filtered[index];
+                        return _buildCategoryCard(context, category);
                       },
-                      decoration: const InputDecoration(
-                        hintText: 'Search in categories...',
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Color(0xFFFF5722))),
+                  ),
+                  error: (err, stack) => Center(child: Text('Error loading categories: $err')),
+                ),
+              ),
+            ],
+          ),
+
+          // Hanging Search & Filter Overlay Div anchored EXACTLY below search box
+          if (_isOverlayOpen)
+            Positioned(
+              top: 52,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => _isOverlayOpen = false),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxHeight: availableOverlayHeight,
+                      ),
+                      child: SingleChildScrollView(
+                        child: HangingSearchFilterOverlay(
+                          isFilterTab: _isFilterTab,
+                          searchQuery: _searchQuery,
+                          searchController: _searchController,
+                          minPriceController: _minPriceController,
+                          maxPriceController: _maxPriceController,
+                          priceRangeValues: _priceRangeValues,
+                          selectedRating: _selectedRating,
+                          selectedBrands: _selectedBrands,
+                          selectedCategories: _selectedCategories,
+                          categories: categoriesAsync.value ?? [],
+                          brands: brandsAsync.value ?? [],
+                          products: allProductsAsync.value ?? [],
+                          onFilterTabChanged: (isFilter) {
+                            setState(() => _isFilterTab = isFilter);
+                          },
+                          onSearchQueryChanged: (query) {
+                            setState(() => _searchQuery = query);
+                          },
+                          onPriceRangeChanged: (range) {
+                            setState(() => _priceRangeValues = range);
+                          },
+                          onRatingChanged: (rating) {
+                            setState(() => _selectedRating = rating);
+                          },
+                          onReset: _resetFilters,
+                          onClose: () => setState(() => _isOverlayOpen = false),
+                          onSelectCategory: (catName) {
+                            setState(() {
+                              _searchQuery = catName.toLowerCase();
+                              _isOverlayOpen = false;
+                            });
+                          },
+                        ),
                       ),
                     ),
                   ),
-                  if (_searchQuery.isNotEmpty)
-                    GestureDetector(
-                      onTap: () {
-                        _searchController.clear();
-                        setState(() {
-                          _searchQuery = '';
-                        });
-                      },
-                      child: const Icon(Icons.close, color: Colors.grey, size: 18),
-                    ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-
-          // Categories List Content
-          Expanded(
-            child: categoriesAsync.when(
-              data: (categories) {
-                final filtered = _searchQuery.isEmpty
-                    ? categories
-                    : categories.where((c) => c.name.toLowerCase().contains(_searchQuery)).toList();
-
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.category_outlined, size: 48, color: Colors.grey),
-                        const SizedBox(height: 12),
-                        Text(
-                          _searchQuery.isEmpty ? 'No categories available' : 'No categories matching "$_searchQuery"',
-                          style: const TextStyle(color: Colors.grey, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                  itemCount: filtered.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final category = filtered[index];
-                    return _buildCategoryCard(context, category);
-                  },
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Color(0xFFFF5722))),
-              ),
-              error: (err, stack) => Center(child: Text('Error loading categories: $err')),
-            ),
-          ),
         ],
       ),
     );
@@ -159,7 +238,7 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
             Container(
               width: 52,
               height: 52,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.paleOrange,
                 shape: BoxShape.circle,
               ),

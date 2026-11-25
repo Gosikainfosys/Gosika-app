@@ -26,19 +26,7 @@ class _FilterSheetState extends State<FilterSheet> {
   final TextEditingController _minPriceController = TextEditingController();
   final TextEditingController _maxPriceController = TextEditingController();
 
-  static const List<Map<String, String>> _priceRangeOptions = [
-    {'key': 'under_1000', 'label': 'Under Rs. 1,000'},
-    {'key': '1000_5000', 'label': 'Rs. 1,000 – Rs. 5,000'},
-    {'key': '5000_15000', 'label': 'Rs. 5,000 – Rs. 15,000'},
-    {'key': '15000_50000', 'label': 'Rs. 15,000 – Rs. 50,000'},
-    {'key': 'above_50000', 'label': 'Above Rs. 50,000'},
-  ];
-
-  static const List<Map<String, String>> _availabilityOptions = [
-    {'key': 'in_stock', 'label': 'In Stock'},
-    {'key': 'low_stock', 'label': 'Low Stock'},
-    {'key': 'out_of_stock', 'label': 'Out of Stock'},
-  ];
+  RangeValues _priceRangeValues = const RangeValues(0, 150000);
 
   static const List<Map<String, String>> _sortOptions = [
     {'key': 'newest', 'label': 'Newest Arrival'},
@@ -53,6 +41,10 @@ class _FilterSheetState extends State<FilterSheet> {
   void initState() {
     super.initState();
     _filters = widget.initialFilters.copyWith();
+    double minP = _filters.minPrice ?? 0;
+    double maxP = _filters.maxPrice ?? 150000;
+    _priceRangeValues = RangeValues(minP, maxP);
+
     if (_filters.minPrice != null) {
       _minPriceController.text = _filters.minPrice!.toStringAsFixed(0);
     }
@@ -91,14 +83,17 @@ class _FilterSheetState extends State<FilterSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Filters & Sorting',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
+                Expanded(
+                  child: Text(
+                    'Filters & Sorting',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkText,
+                    ),
                   ),
                 ),
                 TextButton(
@@ -107,6 +102,7 @@ class _FilterSheetState extends State<FilterSheet> {
                       _filters.reset();
                       _minPriceController.clear();
                       _maxPriceController.clear();
+                      _priceRangeValues = const RangeValues(0, 150000);
                     });
                   },
                   child: const Text(
@@ -138,6 +134,7 @@ class _FilterSheetState extends State<FilterSheet> {
                       label: Text(opt['label']!),
                       selected: isSelected,
                       selectedColor: AppColors.primaryOrange,
+                      backgroundColor: const Color(0xFFF3F4F6),
                       labelStyle: TextStyle(
                         color: isSelected ? Colors.white : AppColors.darkText,
                         fontSize: 12,
@@ -152,62 +149,60 @@ class _FilterSheetState extends State<FilterSheet> {
                   }).toList(),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // 2. Category Filter
-                _buildSectionHeader('Category'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: widget.categories.map((cat) {
-                    final isSelected = _filters.category == cat.slug || _filters.category == cat.id;
-                    return FilterChip(
-                      label: Text(cat.name),
-                      selected: isSelected,
-                      selectedColor: AppColors.primaryOrange,
-                      labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : AppColors.darkText,
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                      onSelected: (selected) {
-                        setState(() {
-                          _filters.category = selected ? cat.slug : null;
-                        });
-                      },
-                    );
-                  }).toList(),
+                // 2. Real API Categories Filter
+                if (widget.categories.isNotEmpty) ...[
+                  _buildSectionHeader('Category'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: widget.categories.map((cat) {
+                      final isSelected = _filters.category == cat.slug || _filters.category == cat.id;
+                      return FilterChip(
+                        label: Text(cat.name),
+                        selected: isSelected,
+                        selectedColor: AppColors.primaryOrange,
+                        backgroundColor: const Color(0xFFF3F4F6),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : AppColors.darkText,
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        onSelected: (selected) {
+                          setState(() {
+                            _filters.category = selected ? cat.slug : null;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // 3. Price Range (NPR) Slider & Inputs
+                _buildSectionHeader('Price Range (NPR)'),
+                RangeSlider(
+                  values: _priceRangeValues,
+                  min: 0,
+                  max: 150000,
+                  divisions: 150,
+                  activeColor: AppColors.primaryOrange,
+                  inactiveColor: Colors.grey[200],
+                  labels: RangeLabels(
+                    'Rs. ${_priceRangeValues.start.round()}',
+                    'Rs. ${_priceRangeValues.end.round()}',
+                  ),
+                  onChanged: (values) {
+                    setState(() {
+                      _priceRangeValues = values;
+                      _filters.minPrice = values.start > 0 ? values.start : null;
+                      _filters.maxPrice = values.end < 150000 ? values.end : null;
+                      _minPriceController.text = values.start.round().toString();
+                      _maxPriceController.text = values.end.round().toString();
+                    });
+                  },
                 ),
-
-                const SizedBox(height: 24),
-
-                // 3. Price Ranges
-                _buildSectionHeader('Price Ranges'),
-                Column(
-                  children: _priceRangeOptions.map((opt) {
-                    final isChecked = _filters.priceRanges.contains(opt['key']);
-                    return CheckboxListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(opt['label']!, style: const TextStyle(fontSize: 13)),
-                      value: isChecked,
-                      activeColor: AppColors.primaryOrange,
-                      onChanged: (val) {
-                        setState(() {
-                          if (val == true) {
-                            _filters.priceRanges.add(opt['key']!);
-                          } else {
-                            _filters.priceRanges.remove(opt['key']);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Custom Price Input
                 Row(
                   children: [
                     Expanded(
@@ -218,15 +213,21 @@ class _FilterSheetState extends State<FilterSheet> {
                           hintText: 'Min (Rs.)',
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onChanged: (val) {
-                          _filters.minPrice = double.tryParse(val);
+                          final parsed = double.tryParse(val);
+                          _filters.minPrice = parsed;
+                          if (parsed != null) {
+                            setState(() {
+                              _priceRangeValues = RangeValues(parsed, _priceRangeValues.end);
+                            });
+                          }
                         },
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text('–'),
+                    const Text('–', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
@@ -236,17 +237,23 @@ class _FilterSheetState extends State<FilterSheet> {
                           hintText: 'Max (Rs.)',
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onChanged: (val) {
-                          _filters.maxPrice = double.tryParse(val);
+                          final parsed = double.tryParse(val);
+                          _filters.maxPrice = parsed;
+                          if (parsed != null) {
+                            setState(() {
+                              _priceRangeValues = RangeValues(_priceRangeValues.start, parsed);
+                            });
+                          }
                         },
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // 4. Rating Filter
                 _buildSectionHeader('Minimum Rating'),
@@ -259,6 +266,7 @@ class _FilterSheetState extends State<FilterSheet> {
                       label: Text('$stars★ & above'),
                       selected: isSelected,
                       selectedColor: AppColors.primaryOrange,
+                      backgroundColor: const Color(0xFFF3F4F6),
                       labelStyle: TextStyle(
                         color: isSelected ? Colors.white : AppColors.darkText,
                         fontSize: 12,
@@ -273,49 +281,25 @@ class _FilterSheetState extends State<FilterSheet> {
                   }).toList(),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // 5. Availability
-                _buildSectionHeader('Availability'),
-                Column(
-                  children: _availabilityOptions.map((opt) {
-                    final isChecked = _filters.availability.contains(opt['key']);
-                    return CheckboxListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(opt['label']!, style: const TextStyle(fontSize: 13)),
-                      value: isChecked,
-                      activeColor: AppColors.primaryOrange,
-                      onChanged: (val) {
-                        setState(() {
-                          if (val == true) {
-                            _filters.availability.add(opt['key']!);
-                          } else {
-                            _filters.availability.remove(opt['key']);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 24),
-
-                // 6. Brands
+                // 5. Real API Brands Filter
                 if (widget.brands.isNotEmpty) ...[
                   _buildSectionHeader('Brands'),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: widget.brands.map((b) {
-                      final isSelected = _filters.brand == b['slug'];
+                      final isSelected = _filters.brand == b['slug'] || _filters.brand == b['id'];
                       return FilterChip(
                         label: Text(b['name']!),
                         selected: isSelected,
                         selectedColor: AppColors.primaryOrange,
+                        backgroundColor: const Color(0xFFF3F4F6),
                         labelStyle: TextStyle(
                           color: isSelected ? Colors.white : AppColors.darkText,
                           fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                         onSelected: (selected) {
                           setState(() {
@@ -325,7 +309,7 @@ class _FilterSheetState extends State<FilterSheet> {
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                 ],
               ],
             ),
@@ -338,7 +322,7 @@ class _FilterSheetState extends State<FilterSheet> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 10,
                   offset: const Offset(0, -3),
                 ),
@@ -354,7 +338,8 @@ class _FilterSheetState extends State<FilterSheet> {
                   backgroundColor: AppColors.primaryOrange,
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  elevation: 2,
                 ),
                 child: Text(
                   _filters.activeFilterCount > 0

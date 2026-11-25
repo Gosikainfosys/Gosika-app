@@ -14,6 +14,7 @@ import '../../providers/catalog_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/cart_icon_badge.dart';
 import '../../widgets/cart_bottom_sheet.dart';
+import '../../widgets/hanging_search_filter_overlay.dart';
 import 'widgets/category_carousel.dart';
 import 'widgets/home_search_bar.dart';
 import 'widgets/modern_product_card.dart';
@@ -30,6 +31,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final GlobalKey _cartIconKey = GlobalKey();
+  late ScrollController _scrollController;
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _minPriceController = TextEditingController();
   final TextEditingController _maxPriceController = TextEditingController();
@@ -38,14 +40,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isOverlayOpen = false;
   bool _isFilterTab = false;
   String _searchQuery = '';
-  String _selectedCategory = 'All';
   String _selectedSort = 'Relevance';
 
   RangeValues _priceRangeValues = const RangeValues(0, 150000);
   int? _selectedRating;
   final Set<String> _selectedBrands = {};
   final Set<String> _selectedCategories = {};
-  bool _showMoreBrands = false;
 
   static const List<ModernProductData> _fallbackDeals = [
     ModernProductData(
@@ -150,7 +150,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()
+      ..addListener(() {
+        if (_isOverlayOpen) setState(() {});
+      });
+  }
+
+  @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     _minPriceController.dispose();
     _maxPriceController.dispose();
@@ -235,7 +245,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _minPriceController.clear();
       _maxPriceController.clear();
       _searchQuery = '';
-      _selectedCategory = 'All';
       _selectedSort = 'Relevance';
       _priceRangeValues = const RangeValues(0, 150000);
       _selectedRating = null;
@@ -247,6 +256,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final mediaTopPadding = MediaQuery.of(context).padding.top;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     // Real API state subscriptions
     final authState = ref.watch(authProvider);
@@ -257,6 +267,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final bannersAsync = ref.watch(bannersProvider);
     final campaignsAsync = ref.watch(campaignsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
+    final brandsAsync = ref.watch(brandsProvider);
     final dealsAsync = ref.watch(dealsProvider);
     final featuredAsync = ref.watch(featuredProductsProvider);
     final allProductsAsync = ref.watch(allProductsProvider);
@@ -291,6 +302,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _priceRangeValues.start > 0 ||
         _priceRangeValues.end < 150000;
 
+    // Calculate exact bottom position of the search box dynamically
+    final double maxScrollable = 26.0 + 54.0 + 4.0;
+    final double currentOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final double progress = (currentOffset / maxScrollable).clamp(0.0, 1.0);
+    final double currentSearchTop = (mediaTopPadding + 26.0 + 54.0 + 4.0) * (1.0 - progress) + (mediaTopPadding + 6.0) * progress;
+    final double overlayTop = currentSearchTop + 46.0;
+
+    final double availableOverlayHeight = (MediaQuery.of(context).size.height - overlayTop - keyboardHeight - 12)
+        .clamp(120.0, MediaQuery.of(context).size.height * 0.70);
+
     return Scaffold(
       backgroundColor: AppColors.creamBackground,
       body: Stack(
@@ -301,6 +322,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ref.invalidate(bannersProvider);
               ref.invalidate(campaignsProvider);
               ref.invalidate(categoriesProvider);
+              ref.invalidate(brandsProvider);
               ref.invalidate(dealsProvider);
               ref.invalidate(featuredProductsProvider);
               ref.invalidate(allProductsProvider);
@@ -308,6 +330,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ref.invalidate(notificationListProvider);
             },
             child: CustomScrollView(
+              controller: _scrollController,
               slivers: [
                 // 1. PINNED COLLAPSING HEADER WITH SMOOTH SEARCH & CART SLIDING ANIMATION
                 SliverPersistentHeader(
@@ -344,7 +367,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       children: [
                         const SizedBox(height: 12),
 
-                        // ACTIVE SEARCH & FILTER RESULTS HEADER & CHIPS (SCREENSHOT 2 VIEW)
+                        // ACTIVE SEARCH & FILTER RESULTS HEADER & CHIPS
                         if (isSearchingOrFiltered) ...[
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -364,7 +387,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       const Text(
-                                        'Showing 1–12 of 245 products',
+                                        'Showing products matching filters',
                                         style: TextStyle(fontSize: 11.5, color: AppColors.secondaryText),
                                       ),
                                     ],
@@ -606,7 +629,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 itemCount: list.length,
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
-                                  childAspectRatio: 0.72,
+                                  childAspectRatio: 0.68,
                                   crossAxisSpacing: 8,
                                   mainAxisSpacing: 8,
                                 ),
@@ -680,7 +703,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   itemCount: list.length,
                                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 2,
-                                    childAspectRatio: 0.72,
+                                    childAspectRatio: 0.68,
                                     crossAxisSpacing: 8,
                                     mainAxisSpacing: 8,
                                   ),
@@ -732,10 +755,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
 
-          // Hanging Search & Filter Overlay Div anchored right below sticky header
+          // Hanging Search & Filter Overlay Div anchored EXACTLY below sticky search box in its own position
           if (_isOverlayOpen)
             Positioned(
-              top: mediaTopPadding + 56,
+              top: overlayTop,
               left: 0,
               right: 0,
               bottom: 0,
@@ -754,10 +777,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     right: 0,
                     child: Container(
                       constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.75,
+                        maxHeight: availableOverlayHeight,
                       ),
                       child: SingleChildScrollView(
-                        child: _buildHangingOverlayDiv(allProductsAsync, categoriesAsync),
+                        child: HangingSearchFilterOverlay(
+                          isFilterTab: _isFilterTab,
+                          searchQuery: _searchQuery,
+                          searchController: _searchController,
+                          minPriceController: _minPriceController,
+                          maxPriceController: _maxPriceController,
+                          priceRangeValues: _priceRangeValues,
+                          selectedRating: _selectedRating,
+                          selectedBrands: _selectedBrands,
+                          selectedCategories: _selectedCategories,
+                          categories: categoriesAsync.value ?? [],
+                          brands: brandsAsync.value ?? [],
+                          products: allProductsAsync.value ?? [],
+                          onFilterTabChanged: (isFilter) {
+                            setState(() => _isFilterTab = isFilter);
+                          },
+                          onSearchQueryChanged: (query) {
+                            setState(() => _searchQuery = query);
+                          },
+                          onPriceRangeChanged: (range) {
+                            setState(() => _priceRangeValues = range);
+                          },
+                          onRatingChanged: (rating) {
+                            setState(() => _selectedRating = rating);
+                          },
+                          onReset: _resetFilters,
+                          onClose: _closeOverlay,
+                        ),
                       ),
                     ),
                   ),
@@ -803,671 +853,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: const Icon(Icons.close_rounded, size: 14, color: AppColors.primaryOrange),
           ),
         ],
-      ),
-    );
-  }
-
-  // Hanging Overlay Div Widget attached directly below the search bar on Home Screen
-  Widget _buildHangingOverlayDiv(
-    AsyncValue<List<Product>> allProductsAsync,
-    AsyncValue<List<Category>> categoriesAsync,
-  ) {
-    final List<Map<String, String>> sampleSuggestions = [
-      {
-        'title': 'Laptop',
-        'subtitle': 'Electronics',
-        'image': 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300',
-      },
-      {
-        'title': 'Gaming Laptop',
-        'subtitle': 'Electronics',
-        'image': 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=300',
-      },
-      {
-        'title': 'Dell Laptop',
-        'subtitle': 'Electronics',
-        'image': 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=300',
-      },
-      {
-        'title': 'Fitness Smart Watch',
-        'subtitle': 'Gadgets',
-        'image': 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
-      },
-      {
-        'title': 'Pro Running Shoes',
-        'subtitle': 'Footwear',
-        'image': 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300',
-      },
-    ];
-
-    final filteredSuggestions = _searchQuery.isEmpty
-        ? sampleSuggestions.take(3).toList()
-        : sampleSuggestions.where((s) => s['title']!.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x20000000),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
-        border: Border.all(color: AppColors.primaryOrange.withValues(alpha: 0.3), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Bar of Hanging Overlay
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryOrange.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _isFilterTab ? Icons.tune_rounded : Icons.search_rounded,
-                  color: AppColors.primaryOrange,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _isFilterTab ? 'Filters' : 'Suggestions & Nearby Search',
-                style: AppTextStyles.heading2.copyWith(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkText,
-                ),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: _resetFilters,
-                child: const Text(
-                  'Reset',
-                  style: TextStyle(color: AppColors.secondaryText, fontSize: 12),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.darkText),
-                onPressed: _closeOverlay,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-
-          const Divider(height: 16),
-
-          // 1. NEARBY LOCATION (USE GPS BUTTON) - ALWAYS KEPT IN SEARCH DIV
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: AppColors.primaryOrange.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primaryOrange.withValues(alpha: 0.2)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.my_location_rounded, color: AppColors.primaryOrange, size: 18),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Nearby Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.darkText)),
-                      Text('Kathmandu Metropolitan City, Nepal', style: TextStyle(fontSize: 10.5, color: AppColors.secondaryText)),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Updated delivery location to current GPS location!')),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryOrange,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Use GPS',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // MODE 1: SEARCH OVERLAY MODE (SCREENSHOT 1 MATCH)
-          if (!_isFilterTab) ...[
-            // Suggestions Section Header with "See all ->"
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Suggestions',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.darkText),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    _closeOverlay();
-                  },
-                  child: const Row(
-                    children: [
-                      Text('See all', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryOrange)),
-                      SizedBox(width: 2),
-                      Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primaryOrange),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Live Suggestion Items List
-            if (filteredSuggestions.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('No matching suggestions.', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              )
-            else
-              Column(
-                children: filteredSuggestions.map((s) {
-                  return Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          s['image']!,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 40,
-                            height: 40,
-                            color: AppColors.primaryOrange.withValues(alpha: 0.1),
-                            child: const Icon(Icons.laptop_mac_rounded, size: 22, color: AppColors.primaryOrange),
-                          ),
-                        ),
-                      ),
-                      title: _buildRichSuggestionTitle(s['title']!, _searchQuery),
-                      subtitle: Text(s['subtitle']!, style: const TextStyle(fontSize: 11, color: AppColors.secondaryText)),
-                      trailing: const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey),
-                      onTap: () {
-                        _searchController.text = s['title']!;
-                        setState(() {
-                          _searchQuery = s['title']!;
-                        });
-                        _closeOverlay();
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-
-            const SizedBox(height: 12),
-
-            // Quick Category / Brand Suggestion Chips Row (Bottom of Search Div in Screenshot 1)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildQuickCategoryChip(
-                    icon: Icons.grid_view_rounded,
-                    iconBgColor: AppColors.primaryOrange,
-                    title: 'Laptops',
-                    count: '124+ products',
-                    onTap: () {
-                      _searchController.text = 'Laptop';
-                      setState(() {
-                        _searchQuery = 'Laptop';
-                        _selectedCategories.add('Laptops');
-                      });
-                      _closeOverlay();
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _buildQuickCategoryChip(
-                    icon: Icons.devices_rounded,
-                    iconBgColor: const Color(0xFF2196F3),
-                    title: 'Electronics',
-                    count: '2.5k+ products',
-                    onTap: () {
-                      setState(() {
-                        _selectedCategories.add('Electronics');
-                      });
-                      _closeOverlay();
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _buildQuickCategoryChip(
-                    icon: Icons.local_offer_rounded,
-                    iconBgColor: const Color(0xFF9C27B0),
-                    title: 'Brands',
-                    count: '50+ brands',
-                    onTap: () {
-                      setState(() {
-                        _isFilterTab = true;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          // MODE 2: FILTER OVERLAY MODE (SCREENSHOT 2 MATCH)
-          if (_isFilterTab) ...[
-            // 1. Price Range (NPR) with Dual-Thumb Slider & Numeric Inputs
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Price Range (NPR)',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.darkText),
-                ),
-                Text(
-                  'NPR ${(_priceRangeValues.start / 1000).round()}k – ${(_priceRangeValues.end / 1000).round()}k',
-                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.primaryOrange),
-                ),
-              ],
-            ),
-            RangeSlider(
-              values: _priceRangeValues,
-              min: 0,
-              max: 150000,
-              divisions: 150,
-              activeColor: AppColors.primaryOrange,
-              inactiveColor: Colors.grey[200],
-              onChanged: (values) {
-                setState(() {
-                  _priceRangeValues = values;
-                  _minPriceController.text = values.start.round().toString();
-                  _maxPriceController.text = values.end.round().toString();
-                });
-              },
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: TextField(
-                      controller: _minPriceController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(fontSize: 12),
-                      decoration: const InputDecoration(
-                        hintText: '30,000',
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
-                      onChanged: (val) {
-                        final parsed = double.tryParse(val);
-                        if (parsed != null) {
-                          setState(() => _priceRangeValues = RangeValues(parsed, _priceRangeValues.end));
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Text('-', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                ),
-                Expanded(
-                  child: Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: TextField(
-                      controller: _maxPriceController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(fontSize: 12),
-                      decoration: const InputDecoration(
-                        hintText: '80,000',
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
-                      onChanged: (val) {
-                        final parsed = double.tryParse(val);
-                        if (parsed != null) {
-                          setState(() => _priceRangeValues = RangeValues(_priceRangeValues.start, parsed));
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 14),
-
-            // 2. Rating Filter Option List
-            const Text(
-              'Rating',
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.darkText),
-            ),
-            const SizedBox(height: 6),
-            Column(
-              children: [4, 3, 2, 1].map((stars) {
-                final isSelected = _selectedRating == stars;
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedRating = isSelected ? null : stars;
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Icon(
-                          isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          size: 18,
-                          color: isSelected ? AppColors.primaryOrange : Colors.grey,
-                        ),
-                        const SizedBox(width: 8),
-                        Row(
-                          children: List.generate(
-                            5,
-                            (i) => Icon(
-                              Icons.star_rounded,
-                              size: 15,
-                              color: i < stars ? const Color(0xFFFFB800) : Colors.grey[300],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '$stars & above',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: AppColors.darkText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 14),
-
-            // 3. Brand Filter Checkboxes
-            const Text(
-              'Brand',
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.darkText),
-            ),
-            const SizedBox(height: 4),
-            ...[
-              {'name': 'Dell', 'count': 12},
-              {'name': 'HP', 'count': 10},
-              {'name': 'Lenovo', 'count': 8},
-              {'name': 'Asus', 'count': 6},
-              if (_showMoreBrands) ...[
-                {'name': 'Apple', 'count': 15},
-                {'name': 'Samsung', 'count': 9},
-              ],
-            ].map((b) {
-              final brandName = b['name'] as String;
-              final isChecked = _selectedBrands.contains(brandName);
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    if (isChecked) {
-                      _selectedBrands.remove(brandName);
-                    } else {
-                      _selectedBrands.add(brandName);
-                    }
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: Checkbox(
-                          value: isChecked,
-                          activeColor: AppColors.primaryOrange,
-                          onChanged: (val) {
-                            setState(() {
-                              if (val == true) {
-                                _selectedBrands.add(brandName);
-                              } else {
-                                _selectedBrands.remove(brandName);
-                              }
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(brandName, style: const TextStyle(fontSize: 12, color: AppColors.darkText)),
-                      const SizedBox(width: 4),
-                      Text('(${b['count']})', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              );
-            }),
-            GestureDetector(
-              onTap: () => setState(() => _showMoreBrands = !_showMoreBrands),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 8),
-                child: Row(
-                  children: [
-                    Text(
-                      _showMoreBrands ? 'See Less' : 'See More',
-                      style: const TextStyle(fontSize: 11.5, color: AppColors.primaryOrange, fontWeight: FontWeight.bold),
-                    ),
-                    Icon(_showMoreBrands ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 16, color: AppColors.primaryOrange),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // 4. Category Checkboxes
-            const Text(
-              'Category',
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.darkText),
-            ),
-            const SizedBox(height: 4),
-            ...[
-              {'name': 'Laptops', 'count': 24},
-              {'name': 'Gaming Laptops', 'count': 12},
-              {'name': 'Business Laptops', 'count': 8},
-              {'name': '2-in-1 Laptops', 'count': 4},
-            ].map((c) {
-              final catName = c['name'] as String;
-              final isChecked = _selectedCategories.contains(catName);
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    if (isChecked) {
-                      _selectedCategories.remove(catName);
-                    } else {
-                      _selectedCategories.add(catName);
-                    }
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: Checkbox(
-                          value: isChecked,
-                          activeColor: AppColors.primaryOrange,
-                          onChanged: (val) {
-                            setState(() {
-                              if (val == true) {
-                                _selectedCategories.add(catName);
-                              } else {
-                                _selectedCategories.remove(catName);
-                              }
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(catName, style: const TextStyle(fontSize: 12, color: AppColors.darkText)),
-                      const SizedBox(width: 4),
-                      Text('(${c['count']})', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ],
-
-          const SizedBox(height: 16),
-
-          // Apply & Search Actions Button
-          SizedBox(
-            width: double.infinity,
-            height: 42,
-            child: ElevatedButton(
-              onPressed: () {
-                _closeOverlay();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryOrange,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(21)),
-                elevation: 2,
-              ),
-              child: Text(
-                _isFilterTab ? 'Apply Filters & View Results' : 'Search & View Results',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRichSuggestionTitle(String title, String query) {
-    if (query.isEmpty) {
-      return Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.darkText),
-      );
-    }
-    final index = title.toLowerCase().indexOf(query.toLowerCase());
-    if (index == -1) {
-      return Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.darkText),
-      );
-    }
-    final before = title.substring(0, index);
-    final match = title.substring(index, index + query.length);
-    final after = title.substring(index + query.length);
-
-    return RichText(
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      text: TextSpan(
-        style: const TextStyle(fontSize: 13, color: AppColors.darkText),
-        children: [
-          TextSpan(text: before),
-          TextSpan(text: match, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.darkText)),
-          TextSpan(text: after),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickCategoryChip({
-    required IconData icon,
-    required Color iconBgColor,
-    required String title,
-    required String count,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FA),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: iconBgColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 16, color: iconBgColor),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                  ),
-                ),
-                Text(
-                  count,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.secondaryText,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right_rounded, size: 16, color: Colors.grey),
-          ],
-        ),
       ),
     );
   }
