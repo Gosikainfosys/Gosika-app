@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../models/product.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/welcome_screen.dart';
 import '../screens/auth/register_screen.dart';
@@ -173,7 +174,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/products/:uuid',
         builder: (context, state) {
           final uuid = state.pathParameters['uuid']!;
-          return ProductDetailScreen(productId: uuid);
+          final product = state.extra as Product?;
+          return ProductDetailScreen(productId: uuid, initialProduct: product);
         },
       ),
       GoRoute(

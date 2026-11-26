@@ -35,7 +35,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         : 0;
 
     return GestureDetector(
-      onTap: () => context.push('/products/${product.id}'),
+      onTap: () => context.push('/products/${product.id}', extra: product),
       child: Container(
         width: widget.width,
         decoration: BoxDecoration(

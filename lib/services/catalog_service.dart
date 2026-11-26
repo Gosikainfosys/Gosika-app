@@ -109,7 +109,22 @@ class CatalogService {
   }
 
   Future<Product> getProductDetail(String uuid) async {
-    final response = await _apiClient.dio.get('/products/$uuid');
-    return Product.fromJson(response.data['data']);
+    try {
+      final response = await _apiClient.dio.get('/products/$uuid');
+      final dynamic resData = response.data;
+      Map<String, dynamic> jsonMap;
+      if (resData is Map) {
+        if (resData.containsKey('data') && resData['data'] is Map) {
+          jsonMap = Map<String, dynamic>.from(resData['data']);
+        } else {
+          jsonMap = Map<String, dynamic>.from(resData);
+        }
+      } else {
+        throw Exception('Invalid product response format');
+      }
+      return Product.fromJson(jsonMap);
+    } catch (e) {
+      throw ApiClient.parseError(e);
+    }
   }
 }

@@ -36,28 +36,46 @@ class Product {
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    List<String> parsedImages = [];
+    final rawImages = json['images'];
+    if (rawImages is List) {
+      for (var e in rawImages) {
+        if (e is String) {
+          parsedImages.add(e);
+        } else if (e is Map) {
+          final url = e['url']?.toString() ?? e['image']?.toString();
+          if (url != null && url.isNotEmpty) parsedImages.add(url);
+        }
+      }
+    }
+
+    final primaryImg = json['primary_image']?['url']?.toString() ?? json['image']?.toString();
+    if (primaryImg != null && primaryImg.isNotEmpty && !parsedImages.contains(primaryImg)) {
+      parsedImages.insert(0, primaryImg);
+    }
+
     return Product(
-      id: json['id'],
-      name: json['name'],
-      slug: json['slug'],
-      description: json['description'],
-      shortDescription: json['short_description'],
-      sku: json['sku'],
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Product',
+      slug: json['slug']?.toString() ?? '',
+      description: json['description']?.toString(),
+      shortDescription: json['short_description']?.toString(),
+      sku: json['sku']?.toString(),
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
       compareAtPrice: json['compare_at_price'] != null
           ? double.tryParse(json['compare_at_price'].toString())
           : null,
-      image: json['image'] ?? json['primary_image']?['url'],
-      images: (json['images'] as List?)?.map((e) => e['url'] as String).toList() ?? [],
+      image: primaryImg ?? (parsedImages.isNotEmpty ? parsedImages.first : null),
+      images: parsedImages,
       variants: (json['variants'] as List?)
-              ?.map((e) => ProductVariant.fromJson(e))
+              ?.map((e) => ProductVariant.fromJson(e is Map ? Map<String, dynamic>.from(e) : {}))
               .toList() ??
           [],
       ratingAvg: double.tryParse(json['rating_avg']?.toString() ?? '0') ?? 0.0,
-      ratingCount: json['rating_count'] ?? 0,
-      isFeatured: json['is_featured'] == 1 || json['is_featured'] == true,
-      status: json['status'] ?? 'active',
-      stockStatus: json['stock_status'] ?? 'in_stock',
+      ratingCount: json['rating_count'] is int ? json['rating_count'] : int.tryParse(json['rating_count']?.toString() ?? '0') ?? 0,
+      isFeatured: json['is_featured'] == 1 || json['is_featured'] == true || json['is_featured'] == '1',
+      status: json['status']?.toString() ?? 'active',
+      stockStatus: json['stock_status']?.toString() ?? 'in_stock',
     );
   }
 }
@@ -79,11 +97,13 @@ class ProductVariant {
 
   factory ProductVariant.fromJson(Map<String, dynamic> json) {
     return ProductVariant(
-      id: json['id'],
-      name: json['name'],
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString(),
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
-      sku: json['sku'],
-      attributes: Map<String, String>.from(json['attributes'] ?? {}),
+      sku: json['sku']?.toString(),
+      attributes: (json['attributes'] is Map)
+          ? Map<String, String>.from((json['attributes'] as Map).map((k, v) => MapEntry(k.toString(), v?.toString() ?? '')))
+          : {},
     );
   }
 }
@@ -105,11 +125,11 @@ class Category {
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      id: json['id'],
-      name: json['name'],
-      slug: json['slug'],
-      icon: json['icon'] ?? json['icon_url'],
-      image: json['image_url'] ?? json['image'],
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      slug: json['slug']?.toString() ?? '',
+      icon: json['icon']?.toString() ?? json['icon_url']?.toString(),
+      image: json['image_url']?.toString() ?? json['image']?.toString(),
     );
   }
 }

@@ -83,7 +83,7 @@ class _ModernProductCardState extends ConsumerState<ModernProductCard> {
     final productModel = p.toProduct();
 
     return GestureDetector(
-      onTap: () => context.push('/products/${p.id}'),
+      onTap: () => context.push('/products/${p.id}', extra: productModel),
       child: Container(
         width: 175,
         decoration: BoxDecoration(

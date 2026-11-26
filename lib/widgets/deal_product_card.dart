@@ -51,7 +51,7 @@ class _DealProductCardState extends ConsumerState<DealProductCard> {
     );
 
     return GestureDetector(
-      onTap: () => context.push('/products/${deal.id}'),
+      onTap: () => context.push('/products/${deal.id}', extra: productModel),
       child: Container(
         width: widget.width ?? 175,
         decoration: BoxDecoration(
